@@ -1,8 +1,8 @@
 
 #include "dhcp.h"
 #include "trustedInterfaces.h"
+#include "rate_limit.h"
 #include "errno.h"
-
 #include <linux/netfilter_bridge.h>
 
 MODULE_LICENSE("GPL");
@@ -225,20 +225,12 @@ static bool is_trusted(struct sk_buff* skb) {
 
     // Check if the device is trusted using the find_trusted_interface function
     if (find_trusted_interface(dev->name)) {
-        printk(KERN_INFO "\nkdai: Packet was on a trusted interface: %s!!", dev->name);
+        //printk(KERN_INFO "\nkdai: Packet was on a trusted interface: %s!!", dev->name);
         return true;  // If the device is trusted, accept the packet
     } else {
-        printk(KERN_INFO "\nkdai: Packet was on an untrusted interface: %s!!", dev->name);
+        //printk(KERN_INFO "\nkdai: Packet was on an untrusted interface: %s!!", dev->name);
         return false;
     }
-}
-
-static bool rate_limit_reached(struct sk_buff* skb){
-    struct net_device *dev;
-    dev = skb->dev;
-
-    //Assume the rate limit has not been reached.
-    return false;
 }
 
 static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
@@ -246,7 +238,7 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
     dev = skb->dev;
 
     //Used only for debugging purpouses
-    if(strcmp(dev->name,"enp0s7")==0){
+    if(strcmp(dev->name,"enp0s7")==0 || strcmp(dev->name,"ma1")==0 ){
         return NF_ACCEPT;
     }
 
@@ -255,17 +247,25 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         return NF_ACCEPT;
     } else {
         //Else the interface is not trusted
-        printk(KERN_INFO "kdai: Checking if we hit the rate limit: %s!!\n", dev->name);
-
-        //if the untrusted interface has hit its rate limit, the packet should be dropped
-        if(rate_limit_reached(skb)) {
-            printk(KERN_INFO "kdai: Packet hit the rate limit...dropping!!\n");
-            return NF_DROP;
+        //Ensure it is is an ARP packet before performing rate limiting
+        struct ethhdr * eth = eth_hdr(skb);
+        if(ntohs(eth->h_proto) == ETH_P_ARP){
+            printk(KERN_INFO "kdai: Recieved ARP on %s\n", dev->name);
+            printk(KERN_INFO "kdai: Checking if we hit the rate limit for %s!!\n", dev->name);
+            //If the untrusted interface has hit its rate limit, the packet should be dropped
+            if(rate_limit_reached(skb)) {
+                printk(KERN_INFO "kdai: Packet hit the rate limit...dropping!!\n");
+                return NF_DROP;
+            } else {
+            //Else the interface has not hit its limit determine if the ARP request is real.
+                printk(KERN_INFO "kdai: Packet did NOT hit the rate limit!!\n");
+                printk(KERN_INFO "kdai: Validating Packet!!\n");
+                return validate_arp_request(priv, skb, state);
+            }
         } else {
-        //Else the interface has not hit its limit determine if the ARP request is real.
-            printk(KERN_INFO "kdai: Packet did NOT hit the rate limit!!\n");
-            printk(KERN_INFO "kdai: Checking if it was ARP!!\n");
-            return validate_arp_request(priv, skb, state);
+            //Do nothing Accept the packet it was not arp
+            //printk(KERN_INFO "kdai: Accept Packet it was not ARP!!\n");
+            return NF_ACCEPT;
         }
     }
 }
@@ -364,14 +364,16 @@ static int __init kdai_init(void) {
     
     //populate_trusted_interface_list();
     //insert_trusted_interface("enp0s4");
+    //insert_trusted_interface("ma1");
     print_trusted_interface_list();
-
+    /*
     if(find_trusted_interface("enp0s4")) {
         printk(KERN_INFO "Found enp0s4 in the list");
     } else {
         printk(KERN_INFO "Did not find enp0s4 in the list");
     }
-
+    */
+   
      /*Initialize Generic Hook for rate limiting all Bridged Traffic*/
      brho = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
      if (unlikely(!brho))
