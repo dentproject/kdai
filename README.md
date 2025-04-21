@@ -1,7 +1,7 @@
 # kdai: Kernel Dynamic ARP Inspection
 
 **kdai** is a **Loadable Kernel Module (LKM)** designed to enhance network security by detecting and preventing [**ARP cache poisoning attacks**](https://en.wikipedia.org/wiki/ARP_spoofing). The module intercepts all ARP requests and responses passing through a **network bridge**, verifying their authenticity before allowing updates to the bridged system's ARP cache. Below is a detailed summary of the features it supports.
-
+ 
 ## Features
 
 ### ARP Packet Inspection and Logging
@@ -16,7 +16,7 @@ To validate incoming ARP packets, **kdai** builds a **dynamic DHCP snooping tabl
 ### Trusted and Untrusted Interfaces
 **kdai** allows each network interface to be assigned a **trust state**:
 - **Trusted interfaces** can send and receive ARP packets freely, bypassing validation checks.
-- **Untrusted interfaces** undergo Dynamic ARP Inspection 
+- **Untrusted interfaces** undergo Dynamic ARP Inspection.
 
 ### Rate Limiting
 **kdai** also enforces **rate limiting** to control ARP traffic and mitigate flooding attacks on untrusted interfaces. By default ARP packets on untrusted interfaces are **rate-limited to 15 packets per second**.
