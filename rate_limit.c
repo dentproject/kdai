@@ -1,4 +1,3 @@
-
 #include "rate_limit.h"
 
 
@@ -64,6 +63,7 @@ struct rate_limit_entry* get_rate_limit_entry(const char *iface_name) {
     return NULL;  // No entry found for the given interface name
 }
 
+//Calcualte if the rate limit was reached. Return true or false.
 bool rate_limit_reached(struct sk_buff* skb){
     struct net_device *dev = skb->dev;
     struct rate_limit_entry *entry;
@@ -106,4 +106,19 @@ bool rate_limit_reached(struct sk_buff* skb){
     }
 
     return false;
+}
+
+//Free allocated memmory
+void clean_rate_limit_table(void){
+    int index;
+    //Iteratre through the rate limit table
+    for (index = 0; index < MAX_INTERFACES; index++){
+        //If the rate_limit_entry exists tthere was an allocated entry
+        if(rate_limit_table[index]){
+            //Free the allocated mmory for the entry
+            kfree(rate_limit_table[index]);
+            //Set the pointer to null 
+            rate_limit_table[index] = NULL;
+        }
+    }
 }
