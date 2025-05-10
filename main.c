@@ -2,6 +2,7 @@
 #include "dhcp.h"
 #include "trustedInterfaces.h"
 #include "rate_limit.h"
+#include "vlan.h"
 #include "errno.h"
 #include <linux/netfilter_bridge.h>
 
@@ -159,7 +160,6 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
     } else {
         printk(KERN_INFO "kdai: NO entry exists in the ARP Snooping Table for the claimed source IP address.\n");
     }
-
     // If we find an entry in the arp table for the source IP address
     // AND the Mac Address of that entry is the same as the mac address from the ARP packet
     if (hw && memcmp(hw->ha, sha, dev->addr_len) == 0) {
@@ -172,7 +172,6 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
     }  
 
     //The entries were different from expected. If Static ACL is configured do not Check DHCP table.
-    
     static_ACL_Enabled = 0; // Default is false
     if (static_ACL_Enabled){
         //Accept packets only that were statically configured
@@ -184,7 +183,7 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
     }
     
     //If an exisitng entry in the ARP table did not match. Check dynamic DHCP Configuraiton
-
+    /* This is ARP DHCP Snooping! */
     // Query the dhcp snooping table
     // Look up the DHCP Snooping Table to check if there is an entry for the claimed
     // source IP address in the table.
@@ -198,7 +197,6 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
         print_status(status);
         return status;
     }
-
     //If we find an entry AND the Mac Address from the DHCP snooping table does not match
     // with the MAC address in the ARP packet ARP spoofing detected.
     if (entry && memcmp(entry->mac, sha, ETH_ALEN) != 0) {
@@ -215,6 +213,7 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
         return status;
     }    
 
+    //Unnecessary but included
     print_status(status);
     return status;
 }
@@ -235,39 +234,76 @@ static bool is_trusted(struct sk_buff* skb) {
 
 static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
     struct net_device *dev;
+    struct ethhdr * eth;
     dev = skb->dev;
+    eth = eth_hdr(skb);
 
     //Used only for debugging purpouses
     if(strcmp(dev->name,"enp0s7")==0 || strcmp(dev->name,"ma1")==0 ){
         return NF_ACCEPT;
     }
 
-    //If the interface is trusted skip any calculations and accept the packet
-    if(is_trusted(skb)){
-        return NF_ACCEPT;
-    } else {
-        //Else the interface is not trusted
-        //Ensure it is is an ARP packet before performing rate limiting
-        struct ethhdr * eth = eth_hdr(skb);
-        if(ntohs(eth->h_proto) == ETH_P_ARP){
-            printk(KERN_INFO "kdai: Recieved ARP on %s\n", dev->name);
-            printk(KERN_INFO "kdai: Checking if we hit the rate limit for %s!!\n", dev->name);
-            //If the untrusted interface has hit its rate limit, the packet should be dropped
-            if(rate_limit_reached(skb)) {
-                printk(KERN_INFO "kdai: Packet hit the rate limit...dropping!!\n");
-                return NF_DROP;
+    //1st Did we receive an ARP packet?
+    if(ntohs(eth->h_proto) == ETH_P_ARP){
+        //YES
+        printk(KERN_INFO "kdai: Recieved ARP on %s\n", dev->name);
+
+        //2nd Does it have a VLAN?
+        if (skb_vlan_tag_present(skb)) {
+            //YES
+
+            //If the packet has a VLAN check if it was a VLAN we should inspect if it is not accept
+            unsigned int vlan_id;
+            vlan_id = skb_vlan_tag_get_id(skb);; //Get VLAN ID from the packet
+            printk(KERN_INFO "kdai: vlan_id was: %d", vlan_id);
+
+            //3rd Is DAI enabled for this VLAN?
+            if(vlan_should_be_inspected(vlan_id)) {
+                //YES
+                printk(KERN_INFO "kdai: vlan_id WAS FOUND in the hash table. INSPECTING\n");
+                
+                //4th Is the interface untrusted?
+                if(!is_trusted(skb)){
+                    //YES
+                    printk(KERN_INFO "kdai: Interface is UNTRUSTED\n");
+
+                    //5th Are we under the rate limit?
+                    if(!rate_limit_reached(skb)) {
+                        //YES 
+                        //The interface has not hit its limit determine if the ARP request is real.
+                        printk(KERN_INFO "kdai: Packet did NOT hit the rate limit!!\n");
+                        printk(KERN_INFO "kdai: Validating Packet!!\n");
+
+                        return validate_arp_request(priv, skb, state);
+
+                    } else {
+                        //NO
+                        printk(KERN_INFO "kdai: Packet hit the rate limit...dropping!!\n");
+                        return NF_DROP;
+                    }
+                } else {
+                    //NO
+                    printk(KERN_INFO "kdai: The Interface was Trusted. ACCEPTING\n");
+                    return NF_ACCEPT;
+                }
             } else {
-            //Else the interface has not hit its limit determine if the ARP request is real.
-                printk(KERN_INFO "kdai: Packet did NOT hit the rate limit!!\n");
-                printk(KERN_INFO "kdai: Validating Packet!!\n");
-                return validate_arp_request(priv, skb, state);
+                //NO
+                //No need to Inspect packet it was not in our list of VLANS to Inspect
+                printk(KERN_INFO "kdai: vlan_id was NOT in the hash table. ACCEPTING\n");
+                return NF_ACCEPT;
             }
         } else {
-            //Do nothing Accept the packet it was not arp
-            //printk(KERN_INFO "kdai: Accept Packet it was not ARP!!\n");
+            //NO
+            //Do nothing vlan_id was not in the packet
+            printk(KERN_INFO "kdai: vlan_id was NOT in the packet ACCEPTING\n");
             return NF_ACCEPT;
         }
-    }
+    } else {
+        //NO
+        //Do nothing Accept the packet it was not arp
+        //printk(KERN_INFO "kdai: Accept Packet it was not ARP!!\n");
+        return NF_ACCEPT;
+    }    
 }
 
 static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
@@ -366,13 +402,8 @@ static int __init kdai_init(void) {
     //insert_trusted_interface("enp0s4");
     //insert_trusted_interface("ma1");
     print_trusted_interface_list();
-    /*
-    if(find_trusted_interface("enp0s4")) {
-        printk(KERN_INFO "Found enp0s4 in the list");
-    } else {
-        printk(KERN_INFO "Did not find enp0s4 in the list");
-    }
-    */
+    add_vlan_to_inspect(10);
+
    
      /*Initialize Generic Hook for rate limiting all Bridged Traffic*/
      brho = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
