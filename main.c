@@ -108,6 +108,13 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
     struct net_device *dev;
     unsigned int status = NF_ACCEPT;
 
+    u16 vlan_id = 0;
+    if (skb_vlan_tag_present(skb)) {
+        vlan_id = skb_vlan_tag_get_id(skb);
+        printk(KERN_INFO "kdai: VLAN ID was: %d\n", vlan_id);
+    } else {
+        printk(KERN_INFO "kdai: NO VLAN was found, defaulting VLAN ID to 0\n");
+    }
 
     eth = eth_hdr(skb);  // Extract the Ethernet header
     if (ntohs(eth->h_proto) != ETH_P_ARP) {
@@ -187,7 +194,7 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
     // Query the dhcp snooping table
     // Look up the DHCP Snooping Table to check if there is an entry for the claimed
     // source IP address in the table.
-    entry = find_dhcp_snooping_entry(sip);
+    entry = find_dhcp_snooping_entry(sip, vlan_id);
     if(entry) {
         printk(KERN_INFO "kdai: An entry exists in the DHCP Snooping Table for the claimed source IP address.\n");
     } else {
@@ -221,9 +228,15 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
 static bool is_trusted(struct sk_buff* skb) {
     struct net_device *dev;
     dev = skb->dev;
-
+    u16 vlan_id = 0;
+    if (skb_vlan_tag_present(skb)) {
+        vlan_id = skb_vlan_tag_get_id(skb);
+        printk(KERN_INFO "kdai: VLAN ID for TRUSTED_INTERFACES was: %d\n", vlan_id);
+    } else {
+        printk(KERN_INFO "kdai: TRUSTED_INTERFACES had NO VLAN, defaulting VLAN ID to 0\n");
+    }
     // Check if the device is trusted using the find_trusted_interface function
-    if (find_trusted_interface(dev->name)) {
+    if (find_trusted_interface(dev->name, vlan_id)) {
         //printk(KERN_INFO "\nkdai: Packet was on a trusted interface: %s!!", dev->name);
         return true;  // If the device is trusted, accept the packet
     } else {
@@ -248,8 +261,11 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         //YES
         printk(KERN_INFO "kdai: Recieved ARP on %s\n", dev->name);
 
-        //2nd Does it have a VLAN?
-        if (skb_vlan_tag_present(skb)) {
+        bool globally_enabled_DAI = true;
+        if(globally_enabled_DAI) printk(KERN_INFO "kdai: globally_enabled_DAI was ENABLED");
+
+        //2nd Does it have a VLAN? OR is DAI enabled for all interfaces?
+        if (skb_vlan_tag_present(skb) || globally_enabled_DAI) {
             //YES
 
             //If the packet has a VLAN check if it was a VLAN we should inspect if it is not accept
@@ -257,8 +273,8 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
             vlan_id = skb_vlan_tag_get_id(skb);; //Get VLAN ID from the packet
             printk(KERN_INFO "kdai: vlan_id was: %d", vlan_id);
 
-            //3rd Is DAI enabled for this VLAN?
-            if(vlan_should_be_inspected(vlan_id)) {
+            //3rd Is DAI enabled for this VLAN? OR is DAI enabled for all interfaces?
+            if(vlan_should_be_inspected(vlan_id) || globally_enabled_DAI) {
                 //YES
                 printk(KERN_INFO "kdai: vlan_id WAS FOUND in the hash table. INSPECTING\n");
                 
@@ -278,24 +294,24 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
 
                     } else {
                         //NO
-                        printk(KERN_INFO "kdai: Packet hit the rate limit...dropping!!\n");
+                        printk(KERN_INFO "kdai: Packet hit the rate limit...dropping!!\n\n");
                         return NF_DROP;
                     }
                 } else {
                     //NO
-                    printk(KERN_INFO "kdai: The Interface was Trusted. ACCEPTING\n");
+                    printk(KERN_INFO "kdai: The Interface was Trusted. ACCEPTING\n\n");
                     return NF_ACCEPT;
                 }
             } else {
                 //NO
                 //No need to Inspect packet it was not in our list of VLANS to Inspect
-                printk(KERN_INFO "kdai: vlan_id was NOT in the hash table. ACCEPTING\n");
+                printk(KERN_INFO "kdai: vlan_id was NOT in the hash table. ACCEPTING\n\n");
                 return NF_ACCEPT;
             }
         } else {
             //NO
             //Do nothing vlan_id was not in the packet
-            printk(KERN_INFO "kdai: vlan_id was NOT in the packet ACCEPTING\n");
+            printk(KERN_INFO "kdai: vlan_id was NOT in the packet ACCEPTING\n\n");
             return NF_ACCEPT;
         }
     } else {
@@ -336,6 +352,13 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
             
             switch (dhcp_packet_type) {
                 case DHCP_ACK:{
+                    u16 vlan_id = 0;
+                    if (skb_vlan_tag_present(skb)) {
+                        vlan_id = skb_vlan_tag_get_id(skb);
+                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
+                    } else {
+                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
+                    }
                     for (opt = payload->bp_options; *opt != DHCP_OPTION_END; opt += opt[1] + 2) {
                         if (*opt == DHCP_OPTION_LEASE_TIME) {
                             memcpy(&lease_time, &opt[2], 4);
@@ -348,7 +371,7 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
                     #else
                         getnstimeofday(&ts);
                     #endif
-                    entry = find_dhcp_snooping_entry(payload->yiaddr);
+                    entry = find_dhcp_snooping_entry(payload->yiaddr, vlan_id);
                     if (entry) {
                         memcpy(entry->mac, payload->chaddr, ETH_ALEN);
                         entry->lease_time = ntohl(lease_time);
@@ -356,32 +379,54 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
                         printk(KERN_INFO "kdai: Updated DHCP snooping entry - IP: %pI4, MAC: %pM, Lease Time: %d seconds, Expiry: %d\n",
                             &payload->yiaddr, payload->chaddr, ntohl(lease_time), entry->expires);
                     } else {
-                        insert_dhcp_snooping_entry(
-                            payload->chaddr, payload->yiaddr, ntohl(lease_time), ts.tv_sec + ntohl(lease_time));
-                            printk(KERN_INFO "kdai: Added new DHCP snooping entry - IP: %pI4, MAC: %pM, Lease Time: %d seconds, Expiry: %lld\n",
-                                &payload->yiaddr, payload->chaddr, ntohl(lease_time), ts.tv_sec + ntohl(lease_time));
+                        insert_dhcp_snooping_entry(payload->chaddr, payload->yiaddr, ntohl(lease_time), ts.tv_sec + ntohl(lease_time), vlan_id);
+                            //printk(KERN_INFO "kdai: Added new DHCP snooping entry - IP: %pI4, MAC: %pM, Lease Time: %d seconds, Expiry: %lld\n",
+                            //    &payload->yiaddr, payload->chaddr, ntohl(lease_time), ts.tv_sec + ntohl(lease_time));
+                            printk(KERN_INFO "kdai: Added new DHCP snooping entry - IP: %pI4, MAC: %pM, Lease Time: %d seconds\n",
+                                &payload->yiaddr, payload->chaddr, ntohl(lease_time));
                     }
                     break;
                 }
                 
                 case DHCP_NAK:{
+                    u16 vlan_id = 0;
+                    if (skb_vlan_tag_present(skb)) {
+                        vlan_id = skb_vlan_tag_get_id(skb);
+                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
+                    } else {
+                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
+                    }
                     printk(KERN_INFO "kdai: DHCPNAK of %pI4\n", &payload->yiaddr);
-                    entry = find_dhcp_snooping_entry(payload->yiaddr);
+                    entry = find_dhcp_snooping_entry(payload->yiaddr, vlan_id);
                     if (entry) {
-                        delete_dhcp_snooping_entry(entry->ip);
+                        delete_dhcp_snooping_entry(entry->ip, vlan_id);
                     }
                     break;
                 }
 
                 case DHCP_RELEASE:{
+                    u16 vlan_id = 0;
+                    if (skb_vlan_tag_present(skb)) {
+                        vlan_id = skb_vlan_tag_get_id(skb);
+                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
+                    } else {
+                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
+                    }
                     printk(KERN_INFO "kdai: DHCPRELEASE of %pI4\n", &payload->ciaddr);
-                    delete_dhcp_snooping_entry(payload->ciaddr);
+                    delete_dhcp_snooping_entry(payload->ciaddr, vlan_id);
                     break;
                 }
 
                 case DHCP_DECLINE:{
+                    u16 vlan_id = 0;
+                    if (skb_vlan_tag_present(skb)) {
+                        vlan_id = skb_vlan_tag_get_id(skb);
+                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
+                    } else {
+                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
+                    }
                     printk(KERN_INFO "kdai: DHCPDECLINE of %pI4\n", &payload->ciaddr);
-                    delete_dhcp_snooping_entry(payload->ciaddr);
+                    delete_dhcp_snooping_entry(payload->ciaddr, vlan_id);
                     break;
                 }
             default:
@@ -399,8 +444,8 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
 static int __init kdai_init(void) {
     
     //populate_trusted_interface_list();
-    //insert_trusted_interface("enp0s4");
-    //insert_trusted_interface("ma1");
+    insert_trusted_interface("enp0s4", 0);
+    insert_trusted_interface("enp0s6", 0);
     print_trusted_interface_list();
     add_vlan_to_inspect(10);
 
