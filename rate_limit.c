@@ -9,22 +9,23 @@ DEFINE_SPINLOCK(rate_lock);
 /**
  * get_rate_limit_entry - Search for a rate limit entry by interface name.
  * @iface_name: The name of the interface to look up.
+ * @vlan_id: The vlan_id to match for Dynamic Arp Inspeciton.
  *
  * This function looks through the rate_limit_list for an entry matching the given
  * interface name. It uses a spinlock to ensure safe access in concurrent contexts.
  *
  * Return: Pointer to the matching rate_limit_entry if found, otherwise NULL.
  */
-static struct rate_limit_entry* get_rate_limit_entry(const char *iface_name) {
+static struct rate_limit_entry* get_rate_limit_entry(const char *iface_name, u16 vlan_id) {
     struct rate_limit_entry *entry;
     unsigned long flags;
 
     //Acquire the spin lock to safely traverse the lsit
     spin_lock_irqsave(&rate_lock, flags);
 
-    //Iterate through the list to find a matching interface name
+    //Iterate through the list to find a matching interface name and vlan id
     list_for_each_entry(entry, &rate_limit_list, list) {
-        if(strncmp(entry->iface_name, iface_name, IFNAMSIZ) == 0){
+        if(strncmp(entry->iface_name, iface_name, IFNAMSIZ) == 0 && entry->vlan_id == vlan_id){
             spin_unlock_irqrestore(&rate_lock, flags);
             return entry;
         }
@@ -37,6 +38,7 @@ static struct rate_limit_entry* get_rate_limit_entry(const char *iface_name) {
 /**
  * create_rate_limit_entry - Create and insert a new rate limit entry.
  * @iface_name: The name of the interface to add.
+ * @vlan_id: The vlan_id to match for Dynamic Arp Inspeciton.
  *
  * This function allocates and initializes a new rate limit entry for a network
  * interface if one does not already exist. It adds the new entry to the
@@ -44,12 +46,12 @@ static struct rate_limit_entry* get_rate_limit_entry(const char *iface_name) {
  *
  * Return: Pointer to the new entry on success, or NULL if it already exists or allocation fails.
  */
-static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name) {
+static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name, u16 vlan_id) {
     struct rate_limit_entry *entry;
     unsigned long flags;
 
     //If the entry already exists return null
-    entry = get_rate_limit_entry(iface_name);
+    entry = get_rate_limit_entry(iface_name, vlan_id);
     if(entry != NULL){
         return NULL;
     }
@@ -65,6 +67,7 @@ static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name) 
     strscpy(entry->iface_name, iface_name, IFNAMSIZ);
     entry->packet_count = 0;
     entry->last_packet_time = 0;
+    entry->vlan_id = vlan_id;
 
     //Add the new entry to our list
     spin_lock_irqsave(&rate_lock, flags);
@@ -93,15 +96,21 @@ bool rate_limit_reached(struct sk_buff* skb){
     struct net_device *dev = skb->dev;
     struct rate_limit_entry *entry;
     unsigned long current_time = jiffies;
-
+    u16 vlan_id = 0;
+    if (skb_vlan_tag_present(skb)) {
+        vlan_id = skb_vlan_tag_get_id(skb);
+        printk(KERN_INFO "kdai: VLAN ID for RATE_LIMIT was: %d\n", vlan_id);
+    } else {
+        printk(KERN_INFO "kdai: RATE_LIMIT had NO VLAN, defaulting VLAN ID to 0\n");
+    }
     // Get or create a rate limit entry for the interface
     printk(KERN_INFO "kdai: Getting the current rate limit entry for %s\n", dev->name);
-    entry = get_rate_limit_entry(dev->name);
+    entry = get_rate_limit_entry(dev->name, vlan_id);
     //If we did not already have an entry
     if (entry == NULL) {
         //Attempt to create an entry
         printk(KERN_INFO "kdai: No rate limit entry existed creating one...\n");
-        entry = create_rate_limit_entry(dev->name);
+        entry = create_rate_limit_entry(dev->name, vlan_id);
         //If we could not create an entry
         if (entry == NULL) {
             //Drop packets by default
