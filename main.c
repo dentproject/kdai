@@ -256,10 +256,12 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
             //YES
             //Set packet VLAN_id to 0
             vlan_id = 0;
-            printk(KERN_INFO "kdai: globally_enabled_DAI was ENABLED");
+            printk(KERN_INFO "kdai: globally_enabled_DAI was ENABLED\n");
             //Continue checking
         } else {
             //NO
+            printk(KERN_INFO "kdai: globally_enabled_DAI was DISABLED\n");
+
             //Does it have a VLAN?
             if (skb_vlan_tag_present(skb)) {
                 //YES
@@ -269,12 +271,12 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
             } else {
                 //NO
                 //Global was disabled and VLAN_id was not found, accept packet
-                printk(KERN_INFO "kdai: vlan_id was NOT in the packet ACCEPTING\n\n");
+                printk(KERN_INFO "kdai: vlan_id was NOT in the PACKET. ACCEPTING\n\n");
                 return NF_ACCEPT;
             }
             //Continue checking
         }
-        printk(KERN_INFO "kdai: vlan_id is: %u", vlan_id);
+        printk(KERN_INFO "kdai: vlan_id is: %u\n", vlan_id);
 
         //3rd Is DAI enabled for this VLAN? OR is DAI enabled for all interfaces?
         if(vlan_should_be_inspected(vlan_id) || globally_enabled_DAI) {
@@ -310,7 +312,7 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         } else {
             //NO
             //No need to Inspect packet it was not in our list of VLANS to Inspect
-            printk(KERN_INFO "kdai: vlan_id was NOT in the hash table. ACCEPTING\n\n");
+            printk(KERN_INFO "kdai: vlan_id was NOT in the HASH TABLE. ACCEPTING\n\n");
             return NF_ACCEPT;
         }
     } else {
@@ -442,7 +444,7 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
 
 static int __init kdai_init(void) {
     
-    globally_enabled_DAI = true;
+    globally_enabled_DAI = false;
     //insert_trusted_interface("enp0s4", 0);
     //insert_trusted_interface("enp0s6", 0);
     print_trusted_interface_list();
