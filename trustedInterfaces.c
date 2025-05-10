@@ -15,13 +15,14 @@ void populate_trusted_interface_list(void) {
     struct net_device *dev;
     // Iterate over all network interfaces
     for_each_netdev(&init_net, dev) {
-        insert_trusted_interface(dev->name);
+        insert_trusted_interface(dev->name, 0);
     }
 }
 
 /**
  * insert_trusted_interface - Insert a new interface into the trusted list.
  * @device_name: The name of the trusted interface to insert
+ * @vlan_id: The vlan associated for DAI
  * 
  * This fucntion inserts the name of a network interface into teh trusted interface list. 
  * It first checks if the interface already exists in the list using find_trusted_interface. 
@@ -33,12 +34,12 @@ void populate_trusted_interface_list(void) {
  * Return: This fucntion returns 1 if the interface name was added, 0 if it already exists,
  * and -1 if mmory allocaiton failed
  */
-int insert_trusted_interface(const char *device_name) {
+int insert_trusted_interface(const char *device_name, u16 vlan_id) {
 
     struct interface_entry *new_entry;
 
     //If we found that device already return
-    if(find_trusted_interface(device_name)){
+    if(find_trusted_interface(device_name, vlan_id)){
         return 0;
     }
 
@@ -52,6 +53,7 @@ int insert_trusted_interface(const char *device_name) {
     // Copy the device name safely
     strncpy(new_entry->name, device_name, IFNAMSIZ - 1);
     new_entry->name[IFNAMSIZ - 1] = '\0'; // Ensure null termination
+    new_entry->vlan_id = vlan_id;
 
     // Initialize the list field of the new entry
     INIT_LIST_HEAD(&new_entry->list);
@@ -68,6 +70,7 @@ int insert_trusted_interface(const char *device_name) {
 /**
  * find_trusted_interface - Find an interface in the trusted list.
  * @interface_name: The name of the interaface to find
+ * @vlan_id: The vlan associated for DAI
  * 
  * This function searches the trusted interface list for an entry that matches the given interface name.
  * If a matching entry is found, the function returns the name of th einterface. If no match is found the
@@ -75,12 +78,12 @@ int insert_trusted_interface(const char *device_name) {
  * 
  * Return: The name of the trusted interface if found, or NULL if not found.
  */
-const char* find_trusted_interface(const char *interface_name) {
+const char* find_trusted_interface(const char *interface_name, u16 vlan_id) {
     struct interface_entry *entry;
 
     // Loop through the list to find a matching interface name
     list_for_each_entry(entry, &trusted_interface_list, list) {
-        if (strncmp(entry->name, interface_name, IFNAMSIZ) == 0) {
+        if (strncmp(entry->name, interface_name, IFNAMSIZ) == 0 && entry->vlan_id == vlan_id) {
             return entry->name; // Interface found, return interface
         }
     }
@@ -109,7 +112,7 @@ void print_trusted_interface_list(void) {
 
     //Iterate and print each entry
     list_for_each_entry(entry, &trusted_interface_list, list) {
-        printk(KERN_INFO " - %s\n", entry->name);
+        printk(KERN_INFO " - Interface:\t%s \t\t VLAN:%u\n", entry->name, entry->vlan_id);
     }
 }
 
