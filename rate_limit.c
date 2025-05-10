@@ -66,7 +66,7 @@ static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name, 
     //Populate the new entry
     strscpy(entry->iface_name, iface_name, IFNAMSIZ);
     entry->packet_count = 0;
-    entry->last_packet_time = 0;
+    entry->last_packet_time = jiffies;
     entry->vlan_id = vlan_id;
 
     //Add the new entry to our list
