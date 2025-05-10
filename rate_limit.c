@@ -1,69 +1,94 @@
 #include "rate_limit.h"
 
-
 #define RATE_LIMIT_WINDOW 1000  // in milliseconds (1000 = 1 second)
 #define MAX_PACKETS_PER_WINDOW 15  // maximum packets per window. By default, the rate for untrusted interfaces is 15 packets per second (pps)
-#define MAX_INTERFACES 128  // maximum number of interfaces (you can adjust this)
 
-static struct rate_limit_entry *rate_limit_table[MAX_INTERFACES];
+LIST_HEAD(rate_limit_list);
+DEFINE_SPINLOCK(rate_lock);
 
-struct rate_limit_entry {
-    char iface_name[IFNAMSIZ];  // Store the interface name
-    unsigned int packet_count;  // Count of packets received
-    unsigned long last_packet_time;  // Time of the last packet received
-};
+/**
+ * get_rate_limit_entry - Search for a rate limit entry by interface name.
+ * @iface_name: The name of the interface to look up.
+ *
+ * This function looks through the rate_limit_list for an entry matching the given
+ * interface name. It uses a spinlock to ensure safe access in concurrent contexts.
+ *
+ * Return: Pointer to the matching rate_limit_entry if found, otherwise NULL.
+ */
+static struct rate_limit_entry* get_rate_limit_entry(const char *iface_name) {
+    struct rate_limit_entry *entry;
+    unsigned long flags;
 
-// Create a new rate limit entry or return NULL if allocation fails
-struct rate_limit_entry* create_rate_limit_entry(const char *iface_name) {
-    int index;
+    //Acquire the spin lock to safely traverse the lsit
+    spin_lock_irqsave(&rate_lock, flags);
 
-    // Check if the entry for the given interface already exists
-    for (index = 0; index < MAX_INTERFACES; index++) {
-        if (rate_limit_table[index] && strcmp(rate_limit_table[index]->iface_name, iface_name) == 0) {
-            return NULL;  // Entry already exists, return NULL (or you could reset the entry instead)
+    //Iterate through the list to find a matching interface name
+    list_for_each_entry(entry, &rate_limit_list, list) {
+        if(strncmp(entry->iface_name, iface_name, IFNAMSIZ) == 0){
+            spin_unlock_irqrestore(&rate_lock, flags);
+            return entry;
         }
     }
-
-    // Find an empty spot in the rate limit table
-    for (index = 0; index < MAX_INTERFACES; index++) {
-        if (!rate_limit_table[index]) {
-            break;  // Found an empty slot
-        }
-    }
-
-    if (index == MAX_INTERFACES) {
-        return NULL;  // No available space in the table
-    }
-
-    // Allocate memory for a new entry
-    rate_limit_table[index] = kmalloc(sizeof(struct rate_limit_entry), GFP_KERNEL);
-    if (!rate_limit_table[index]) {
-        return NULL;  // Memory allocation failed
-    }
-
-    // Initialize the rate limit entry
-    strncpy(rate_limit_table[index]->iface_name, iface_name, IFNAMSIZ);
-    rate_limit_table[index]->packet_count = 0;
-    rate_limit_table[index]->last_packet_time = 0;
-
-    return rate_limit_table[index];  // Return the created entry
+    spin_unlock_irqrestore(&rate_lock, flags);
+    //We did not find an entry return null
+    return NULL;
 }
 
-// Get an existing rate limit entry by interface name
-struct rate_limit_entry* get_rate_limit_entry(const char *iface_name) {
-    int index;
+/**
+ * create_rate_limit_entry - Create and insert a new rate limit entry.
+ * @iface_name: The name of the interface to add.
+ *
+ * This function allocates and initializes a new rate limit entry for a network
+ * interface if one does not already exist. It adds the new entry to the
+ * global rate_limit_list under a spinlock to ensure thread safety.
+ *
+ * Return: Pointer to the new entry on success, or NULL if it already exists or allocation fails.
+ */
+static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name) {
+    struct rate_limit_entry *entry;
+    unsigned long flags;
 
-    // Search the rate limit table for the entry matching the interface name
-    for (index = 0; index < MAX_INTERFACES; index++) {
-        if (rate_limit_table[index] && strcmp(rate_limit_table[index]->iface_name, iface_name) == 0) {
-            return rate_limit_table[index];  // Return the found entry
-        }
+    //If the entry already exists return null
+    entry = get_rate_limit_entry(iface_name);
+    if(entry != NULL){
+        return NULL;
     }
 
-    return NULL;  // No entry found for the given interface name
+    //Allocate and initialize the size of a new entry
+    entry = kmalloc(sizeof(struct rate_limit_entry), GFP_KERNEL);
+    if(entry == NULL){
+        printk(KERN_INFO "kdai kmalloc failed\n");
+        return NULL;
+    }
+    
+    //Populate the new entry
+    strscpy(entry->iface_name, iface_name, IFNAMSIZ);
+    entry->packet_count = 0;
+    entry->last_packet_time = 0;
+
+    //Add the new entry to our list
+    spin_lock_irqsave(&rate_lock, flags);
+    list_add(&entry->list, &rate_limit_list);
+    spin_unlock_irqrestore(&rate_lock, flags);
+
+    return entry;
+
 }
 
-//Calcualte if the rate limit was reached. Return true or false.
+
+/**
+ * rate_limit_reached - Calculate if the rate limit was reached.
+ * @skb: The network packet (sk_buff) that is being processed.
+ *
+ * This function checks whether the rate limit for a given network interface has
+ * been exceeded based on a given time window. If the rate limit is exceeded,
+ * it returns true, indicating the packet should be dropped. Otherwise, it 
+ * returns false, allowing the packet to proceed. The function also ensures that
+ * rate limit entries are created for interfaces that do not have them yet.
+ *
+ * Return: true if the rate limit has been exceeded and the packet should be dropped, 
+ *         false if the packet can be processed.
+ */
 bool rate_limit_reached(struct sk_buff* skb){
     struct net_device *dev = skb->dev;
     struct rate_limit_entry *entry;
@@ -72,21 +97,26 @@ bool rate_limit_reached(struct sk_buff* skb){
     // Get or create a rate limit entry for the interface
     printk(KERN_INFO "kdai: Getting the current rate limit entry for %s\n", dev->name);
     entry = get_rate_limit_entry(dev->name);
-    if (!entry) {
+    //If we did not already have an entry
+    if (entry == NULL) {
+        //Attempt to create an entry
         printk(KERN_INFO "kdai: No rate limit entry existed creating one...\n");
         entry = create_rate_limit_entry(dev->name);
-        if (!entry) {
+        //If we could not create an entry
+        if (entry == NULL) {
+            //Drop packets by default
             printk(KERN_INFO "kdai: Could not create a rate limit entry dropping...\n");
-            return true; // If creation fails, drop packets by default
+            return true; // Rate limit reached == true
         }
     }
+    //At this point we have either found or created a new rate limit entry
     printk(KERN_INFO "kdai: Current count is %d\n", entry->packet_count);
 
     // Check if the time window has elapsed
-    //if the current time is after the earliest valid timestamp when a new packet can be processes
-    //the earliest valid timestamp when a new packet can be processes is entry->last_packet_time + msecs_to_jiffies(RATE_LIMIT_WINDOW)
+    //if the current time is after the earliest valid timestamp when a new packet can be processed
+    //( the earliest valid timestamp when a new packet can be processes is entry->last_packet_time + msecs_to_jiffies(RATE_LIMIT_WINDOW) )
     if (time_after(current_time, entry->last_packet_time + msecs_to_jiffies(RATE_LIMIT_WINDOW))) {
-        // Reset the packet_count and last_packet_recieved time
+        // Reset the packet_count and last_packet_received time
         printk(KERN_INFO "kdai: Time window has elapsed, reset the packet count for %s\n", dev->name);
         entry->packet_count = 0; 
         entry->last_packet_time = current_time;
@@ -108,17 +138,25 @@ bool rate_limit_reached(struct sk_buff* skb){
     return false;
 }
 
-//Free allocated memmory
+/**
+ * clean_rate_limit_table - Free allocated memory for all rate limit entries in the list.
+ *
+ * This function iterates through the global list of rate limit entries, removes 
+ * each entry from the list, and frees the allocated memory. 
+ * The operation is done under a spinlock to ensure thread safety.
+ *
+ * Return: void
+ */
 void clean_rate_limit_table(void){
-    int index;
-    //Iteratre through the rate limit table
-    for (index = 0; index < MAX_INTERFACES; index++){
-        //If the rate_limit_entry exists tthere was an allocated entry
-        if(rate_limit_table[index]){
-            //Free the allocated mmory for the entry
-            kfree(rate_limit_table[index]);
-            //Set the pointer to null 
-            rate_limit_table[index] = NULL;
-        }
+    struct list_head* curr, *next;
+    struct rate_limit_entry* entry;
+    unsigned long flags;
+
+    spin_lock_irqsave(&rate_lock, flags);
+    list_for_each_safe(curr, next, &rate_limit_list) {
+        entry = list_entry(curr, struct rate_limit_entry, list);
+        list_del(&entry->list);
+        kfree(entry);
     }
+    spin_unlock_irqrestore(&rate_lock, flags);
 }
