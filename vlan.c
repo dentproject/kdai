@@ -8,12 +8,12 @@
 static struct hlist_head vlan_hash_table[VLAN_HASH_SIZE];
 
 // Hash function
-static inline unsigned int vlan_hash(unsigned int vlan_id) {
+static inline unsigned int vlan_hash(u16 vlan_id) {
     return hash_32(vlan_id, VLAN_HASH_SIZE);
 }
 
 // Add VLAN to be inspected
-void add_vlan_to_inspect(unsigned int vlan_id) {
+void add_vlan_to_inspect(u16 vlan_id) {
     unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry = kmalloc(sizeof(struct vlan_hash_entry), GFP_KERNEL);
     if (!entry)
@@ -24,7 +24,7 @@ void add_vlan_to_inspect(unsigned int vlan_id) {
 }
 
 // Check if VLAN should be inspected
-bool vlan_should_be_inspected(unsigned int vlan_id) {
+bool vlan_should_be_inspected(u16 vlan_id) {
     unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry;
 
@@ -36,7 +36,7 @@ bool vlan_should_be_inspected(unsigned int vlan_id) {
 }
 
 // To remove a VLAN
-void remove_vlan_from_inspect(unsigned int vlan_id) {
+void remove_vlan_from_inspect(u16 vlan_id) {
     unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry;
 

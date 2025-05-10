@@ -15,6 +15,7 @@ MODULE_VERSION("0.1");
 
 static struct nf_hook_ops* ipho = NULL;
 static struct nf_hook_ops* brho = NULL;
+bool globally_enabled_DAI;
 
 static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha, 
     u32 sip, unsigned char* tha, u32 tip)  {
@@ -81,7 +82,7 @@ static void print_status(int status){
     }
 }
 
-static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
+static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const struct nf_hook_state* state, u16 vlan_id) {
     
     //Refrence Structure to Standard ARP header used in the linux Kernel
     struct arp_hdr {
@@ -107,21 +108,12 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
     u32 tip;
     struct net_device *dev;
     unsigned int status = NF_ACCEPT;
-
-    u16 vlan_id = 0;
-    if (skb_vlan_tag_present(skb)) {
-        vlan_id = skb_vlan_tag_get_id(skb);
-        printk(KERN_INFO "kdai: VLAN ID was: %d\n", vlan_id);
-    } else {
-        printk(KERN_INFO "kdai: NO VLAN was found, defaulting VLAN ID to 0\n");
-    }
-
     eth = eth_hdr(skb);  // Extract the Ethernet header
-    if (ntohs(eth->h_proto) != ETH_P_ARP) {
-        // Not an ARP packet
-        printk(KERN_INFO "kdai: Packet was NOT an ARP packet. DAI does nothing. Accepting\n");
-        return NF_ACCEPT;
-    }
+    // if (ntohs(eth->h_proto) != ETH_P_ARP) {
+    //     // Not an ARP packet
+    //     printk(KERN_INFO "kdai: Packet was NOT an ARP packet. DAI does nothing. Accepting\n");
+    //     return NF_ACCEPT;
+    // }
     arp = (struct arp_hdr *)(eth + 1);  // Skip past the Ethernet header to get the ARP header
     
     sha = arp->ar_sha;   // Sender MAC address
@@ -131,10 +123,10 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
 
     dev = skb->dev;
 
-    if (unlikely(!skb)) {
-        // Drop if skb is NULL
-        return NF_DROP;  
-    }
+    // if (unlikely(!skb)) {
+    //     // Drop if skb is NULL
+    //     return NF_DROP;  
+    // }
 
     //For debugging purpouses only
     if(strcmp(dev->name,"enp0s7")==0){
@@ -225,18 +217,9 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
     return status;
 }
 
-static bool is_trusted(struct sk_buff* skb) {
-    struct net_device *dev;
-    dev = skb->dev;
-    u16 vlan_id = 0;
-    if (skb_vlan_tag_present(skb)) {
-        vlan_id = skb_vlan_tag_get_id(skb);
-        printk(KERN_INFO "kdai: VLAN ID for TRUSTED_INTERFACES was: %d\n", vlan_id);
-    } else {
-        printk(KERN_INFO "kdai: TRUSTED_INTERFACES had NO VLAN, defaulting VLAN ID to 0\n");
-    }
+static bool is_trusted(const char *interface_name, u16 vlan_id) {
     // Check if the device is trusted using the find_trusted_interface function
-    if (find_trusted_interface(dev->name, vlan_id)) {
+    if (find_trusted_interface(interface_name, vlan_id)) {
         //printk(KERN_INFO "\nkdai: Packet was on a trusted interface: %s!!", dev->name);
         return true;  // If the device is trusted, accept the packet
     } else {
@@ -246,10 +229,17 @@ static bool is_trusted(struct sk_buff* skb) {
 }
 
 static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
+
+    if (unlikely(!skb)) {
+        // Drop if skb is NULL
+        return NF_DROP;  
+    }
+
     struct net_device *dev;
     struct ethhdr * eth;
     dev = skb->dev;
     eth = eth_hdr(skb);
+    u16 vlan_id;
 
     //Used only for debugging purpouses
     if(strcmp(dev->name,"enp0s7")==0 || strcmp(dev->name,"ma1")==0 ){
@@ -261,57 +251,66 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         //YES
         printk(KERN_INFO "kdai: Recieved ARP on %s\n", dev->name);
 
-        bool globally_enabled_DAI = true;
-        if(globally_enabled_DAI) printk(KERN_INFO "kdai: globally_enabled_DAI was ENABLED");
-
-        //2nd Does it have a VLAN? OR is DAI enabled for all interfaces?
-        if (skb_vlan_tag_present(skb) || globally_enabled_DAI) {
+        //2nd Is Global Inspection enabled
+        if(globally_enabled_DAI) {
             //YES
-
-            //If the packet has a VLAN check if it was a VLAN we should inspect if it is not accept
-            unsigned int vlan_id;
-            vlan_id = skb_vlan_tag_get_id(skb);; //Get VLAN ID from the packet
-            printk(KERN_INFO "kdai: vlan_id was: %d", vlan_id);
-
-            //3rd Is DAI enabled for this VLAN? OR is DAI enabled for all interfaces?
-            if(vlan_should_be_inspected(vlan_id) || globally_enabled_DAI) {
+            //Set packet VLAN_id to 0
+            vlan_id = 0;
+            printk(KERN_INFO "kdai: globally_enabled_DAI was ENABLED");
+            //Continue checking
+        } else {
+            //NO
+            //Does it have a VLAN?
+            if (skb_vlan_tag_present(skb)) {
                 //YES
-                printk(KERN_INFO "kdai: vlan_id WAS FOUND in the hash table. INSPECTING\n");
-                
-                //4th Is the interface untrusted?
-                if(!is_trusted(skb)){
-                    //YES
-                    printk(KERN_INFO "kdai: Interface is UNTRUSTED\n");
+                //Get VLAN ID from the packet
+                vlan_id = skb_vlan_tag_get_id(skb);; 
+                printk(KERN_INFO "kdai: vlan_id found: %u", vlan_id);
+            } else {
+                //NO
+                //Global was disabled and VLAN_id was not found, accept packet
+                printk(KERN_INFO "kdai: vlan_id was NOT in the packet ACCEPTING\n\n");
+                return NF_ACCEPT;
+            }
+            //Continue checking
+        }
+        printk(KERN_INFO "kdai: vlan_id is: %u", vlan_id);
 
-                    //5th Are we under the rate limit?
-                    if(!rate_limit_reached(skb)) {
-                        //YES 
-                        //The interface has not hit its limit determine if the ARP request is real.
-                        printk(KERN_INFO "kdai: Packet did NOT hit the rate limit!!\n");
-                        printk(KERN_INFO "kdai: Validating Packet!!\n");
+        //3rd Is DAI enabled for this VLAN? OR is DAI enabled for all interfaces?
+        if(vlan_should_be_inspected(vlan_id) || globally_enabled_DAI) {
+            //YES
+            //Print Logs
+            if(vlan_should_be_inspected(vlan_id)) printk(KERN_INFO "kdai: vlan_id WAS FOUND in the hash table. INSPECTING\n");
+            if(globally_enabled_DAI) printk(KERN_INFO "kdai: INSPECTING ALL\n");
 
-                        return validate_arp_request(priv, skb, state);
+            //4th Is the interface not trusted?
+            if(is_trusted(dev->name,vlan_id) == false){
+                //YES
+                printk(KERN_INFO "kdai: Interface is UNTRUSTED\n");
 
-                    } else {
-                        //NO
-                        printk(KERN_INFO "kdai: Packet hit the rate limit...dropping!!\n\n");
-                        return NF_DROP;
-                    }
+                //5th Are we under the rate limit?
+                if(!rate_limit_reached(dev->name, vlan_id)) {
+                    //YES 
+                    //The interface has not hit its limit determine if the ARP request is real.
+                    printk(KERN_INFO "kdai: Packet did NOT hit the rate limit!!\n");
+                    printk(KERN_INFO "kdai: Validating Packet!!\n");
+
+                    return validate_arp_request(priv, skb, state, vlan_id);
+
                 } else {
                     //NO
-                    printk(KERN_INFO "kdai: The Interface was Trusted. ACCEPTING\n\n");
-                    return NF_ACCEPT;
+                    printk(KERN_INFO "kdai: Packet hit the rate limit...DROPPING!!\n\n");
+                    return NF_DROP;
                 }
             } else {
                 //NO
-                //No need to Inspect packet it was not in our list of VLANS to Inspect
-                printk(KERN_INFO "kdai: vlan_id was NOT in the hash table. ACCEPTING\n\n");
+                printk(KERN_INFO "kdai: The Interface was Trusted. ACCEPTING\n\n");
                 return NF_ACCEPT;
             }
         } else {
             //NO
-            //Do nothing vlan_id was not in the packet
-            printk(KERN_INFO "kdai: vlan_id was NOT in the packet ACCEPTING\n\n");
+            //No need to Inspect packet it was not in our list of VLANS to Inspect
+            printk(KERN_INFO "kdai: vlan_id was NOT in the hash table. ACCEPTING\n\n");
             return NF_ACCEPT;
         }
     } else {
@@ -443,9 +442,9 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
 
 static int __init kdai_init(void) {
     
-    //populate_trusted_interface_list();
-    insert_trusted_interface("enp0s4", 0);
-    insert_trusted_interface("enp0s6", 0);
+    globally_enabled_DAI = true;
+    //insert_trusted_interface("enp0s4", 0);
+    //insert_trusted_interface("enp0s6", 0);
     print_trusted_interface_list();
     add_vlan_to_inspect(10);
 

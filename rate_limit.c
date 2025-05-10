@@ -92,25 +92,17 @@ static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name, 
  * Return: true if the rate limit has been exceeded and the packet should be dropped, 
  *         false if the packet can be processed.
  */
-bool rate_limit_reached(struct sk_buff* skb){
-    struct net_device *dev = skb->dev;
+bool rate_limit_reached(const char *interface_name, u16 vlan_id){
     struct rate_limit_entry *entry;
     unsigned long current_time = jiffies;
-    u16 vlan_id = 0;
-    if (skb_vlan_tag_present(skb)) {
-        vlan_id = skb_vlan_tag_get_id(skb);
-        printk(KERN_INFO "kdai: VLAN ID for RATE_LIMIT was: %d\n", vlan_id);
-    } else {
-        printk(KERN_INFO "kdai: RATE_LIMIT had NO VLAN, defaulting VLAN ID to 0\n");
-    }
     // Get or create a rate limit entry for the interface
-    printk(KERN_INFO "kdai: Getting the current rate limit entry for %s\n", dev->name);
-    entry = get_rate_limit_entry(dev->name, vlan_id);
+    printk(KERN_INFO "kdai: Getting the current rate limit entry for %s\n", interface_name);
+    entry = get_rate_limit_entry(interface_name, vlan_id);
     //If we did not already have an entry
     if (entry == NULL) {
         //Attempt to create an entry
         printk(KERN_INFO "kdai: No rate limit entry existed creating one...\n");
-        entry = create_rate_limit_entry(dev->name, vlan_id);
+        entry = create_rate_limit_entry(interface_name, vlan_id);
         //If we could not create an entry
         if (entry == NULL) {
             //Drop packets by default
@@ -126,7 +118,7 @@ bool rate_limit_reached(struct sk_buff* skb){
     //( the earliest valid timestamp when a new packet can be processes is entry->last_packet_time + msecs_to_jiffies(RATE_LIMIT_WINDOW) )
     if (time_after(current_time, entry->last_packet_time + msecs_to_jiffies(RATE_LIMIT_WINDOW))) {
         // Reset the packet_count and last_packet_received time
-        printk(KERN_INFO "kdai: Time window has elapsed, reset the packet count for %s\n", dev->name);
+        printk(KERN_INFO "kdai: Time window has elapsed, reset the packet count for %s\n", interface_name);
         entry->packet_count = 0; 
         entry->last_packet_time = current_time;
     }

@@ -9,5 +9,5 @@ struct rate_limit_entry {
 };
 
 // Function declarations
-bool rate_limit_reached(struct  sk_buff* skb);
+bool rate_limit_reached(const char *interface_name, u16 vlan_id);
 void clean_rate_limit_table(void);
