@@ -19,3 +19,5 @@ const char* find_trusted_interface(const char *interface_name, u16 vlan_id);
 void print_trusted_interface_list(void);
 
 void free_trusted_interface_list(void);
+
+void parse_interfaces_and_vlan(char * interfaces_and_vlan);
