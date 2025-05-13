@@ -22,6 +22,10 @@ char * vlans_to_inspect = NULL; //Default is None
 module_param(vlans_to_inspect, charp, 0644);
 MODULE_PARM_DESC(vlans_to_inspect, "Comma-separated list of VLANs DAI should inspect");
 
+char * trusted_interfaces = NULL; //Default is None
+module_param(trusted_interfaces, charp, 0644);
+MODULE_PARM_DESC(trusted_interfaces, "Comma-separated list of Interfaces:VLAN_ID that are considered to be trusted");
+
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("M. Sami GURPINAR <sami.gurpinar@gmail.com>. Edited by Korel Ucpinar <korelucpinar@gmail.com>");
@@ -489,6 +493,7 @@ static int __init kdai_init(void) {
     
     init_vlan_hash_table();
     parse_vlans(vlans_to_inspect);
+    parse_interfaces_and_vlan(trusted_interfaces);
 
     //Enable DAI on all untagged packets
     add_vlan_to_inspect(0); 

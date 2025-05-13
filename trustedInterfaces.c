@@ -142,3 +142,48 @@ void free_trusted_interface_list(void) {
     }
 }
 
+
+//Taken a string of comma seperated vlans and add those vlans to the inspection list
+void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
+    char * token;
+    char * vlan_id_str;
+    char * str;
+    char *to_free;
+
+    if(interfaces_and_vlan==NULL){
+        return;
+    }
+
+    //Duplicate the string to safely modify it
+    to_free = kstrdup(interfaces_and_vlan,GFP_KERNEL);
+    str = to_free;
+
+    //Split the interfaces_and_vlan string into parts 
+    //Ex. enp0s1:100,enp0s2:200,enp0s3:300 -> enp0s1:100'\0'enp0s2:200'\0'enp0s3:300'\0'
+    while( (token = strsep(&str, ",")) != NULL) {
+        //Token will return the start of the string
+        //Ex. enp0s1:100
+
+        //Find the deliminator and null terminate the interface from the vlan;
+        vlan_id_str = strstr(token, ":");
+        if (!vlan_id_str) {
+            printk(KERN_INFO "Invalid format (missing colon): %s\n", token);
+            continue;
+        }
+        *vlan_id_str='\0';
+        //Move to the start of the vlan_id
+        vlan_id_str++;
+
+        u16 vlan_id;
+        //Convert the token into an unsigned 16 bit integer
+        if(kstrtou16(vlan_id_str, 10, &vlan_id) == 0){
+            //After converting add the interface and vlan to the trusted list
+            insert_trusted_interface(token, vlan_id);
+        } else {
+            printk(KERN_INFO "Invalid VLAN_ID: %s\n", token);
+        }
+    }
+    //Free the allocated memory
+    kfree(to_free);
+
+}
