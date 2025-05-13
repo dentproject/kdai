@@ -23,3 +23,8 @@ jobs:
       - name: Run Test_Build_Kernel_Module
         working-directory: ./tests
         run: ./Test_Build_Kernel_Module.sh
+
+      # Run Test_Insert_Kernel_Module
+      - name: Run Test_Insert_Kernel_Module
+        working-directory: ./tests
+        run: ./Test_Insert_Kernel_Module.sh
