@@ -30,7 +30,7 @@ echo "Test Passed!"
 echo
 
 echo "Cleaning Up"
-dmesg -C
+sudo dmesg -C
 make -C .. remove
 
 exit 0

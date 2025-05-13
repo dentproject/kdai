@@ -39,8 +39,8 @@ cleanup() {
 trap cleanup EXIT
 
 cleanup
-dmesg -C
-dmesg -n 3
+sudo dmesg -C
+sudo dmesg -n 3
 echo
 echo "=== Updating Package list ==="
 echo
@@ -133,5 +133,5 @@ ARP_EXIT_STATUS=$(sudo dmesg | grep "ARP was NOT VALID")
 
 echo
 echo "Test Passed!"          
-dmesg -n 7
+sudo dmesg -n 7
 exit 0

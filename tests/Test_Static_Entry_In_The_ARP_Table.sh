@@ -37,8 +37,8 @@ cleanup() {
 
 # Always run cleanup on exit (normal or error)
 trap cleanup EXIT
-dmesg -C
-dmesg -n 3
+sudo dmesg -C
+sudo dmesg -n 3
 cleanup
 
 echo
@@ -140,5 +140,5 @@ ARP_EXIT_STATUS=$(sudo dmesg | grep "A Known Mac Adress with the same Source IP 
 
 echo
 echo "Test Passed!"          
-dmesg -n 7
+sudo dmesg -n 7
 exit 0

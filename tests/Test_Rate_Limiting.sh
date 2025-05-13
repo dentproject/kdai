@@ -37,8 +37,8 @@ cleanup() {
 
 # Always run cleanup on exit (normal or error)
 trap cleanup EXIT
-dmesg -C
-dmesg -n 3
+sudo dmesg -C
+sudo dmesg -n 3
 cleanup
 
 echo
@@ -133,5 +133,5 @@ ARP_EXIT_STATUS=$(sudo dmesg | grep "Packet hit the rate limit.")
 echo
 echo "Test Passed!"     
 echo
-dmesg -n 7
+sudo dmesg -n 7
 exit 
