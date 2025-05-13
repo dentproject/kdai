@@ -53,3 +53,8 @@ jobs:
       - name: Run Test_Static_Entry_In_The_ARP_Table
         working-directory: ./tests
         run: ./Test_Static_Entry_In_The_ARP_Table.sh
+
+      # Run Test_Rate_Limiting
+      - name: Run Test_Rate_Limiting
+        working-directory: ./tests
+        run: ./Test_Rate_Limiting.sh
