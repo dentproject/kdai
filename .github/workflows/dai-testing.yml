@@ -54,7 +54,12 @@ jobs:
         working-directory: ./tests
         run: ./Test_Static_Entry_In_The_ARP_Table.sh
 
-      # Run Test_Rate_Limiting
-      - name: Run Test_Rate_Limiting
+      # Run Test_Above_Rate_Limit
+      - name: Run Test_Above_Rate_Limit
         working-directory: ./tests
-        run: ./Test_Rate_Limiting.sh
+        run: ./Test_Above_Rate_Limit.sh
+      
+      # Run Test_Below_Rate_Limit
+      - name: Run Test_Below_Rate_Limit
+        working-directory: ./tests
+        run: ./Test_Below_Rate_Limit.sh

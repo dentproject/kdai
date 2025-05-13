@@ -122,7 +122,7 @@ echo
 make -C .. install
 
 echo
-echo "=== Testing DAI Accepts Packets From DHCP Acknowledged Sources ==="
+echo "=== Testing DAI Drops Packets When Rate Limit is Reached ==="
 echo
 #Send arp packets above the rate limit
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/send_ARP_Packets_Above_Limit.py

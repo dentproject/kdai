@@ -122,7 +122,7 @@ echo
 make -C .. install
 
 echo
-echo "=== Testing DAI Accepts Packets From DHCP Acknowledged Sources ==="
+echo "=== Testing DAI Drops Spoofed Packets ==="
 echo
 #Update the DHCP table with 192.168.1.1 and 192.168.1.2
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/DHCP_without_VLAN.py

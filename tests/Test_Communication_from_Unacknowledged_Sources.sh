@@ -121,7 +121,7 @@ echo
 make -C .. install
 
 echo
-echo "=== Testing DAI Filtering From Unvalidated Sources ==="
+echo "=== Testing DAI Filtering From Unacknowledged Sources ==="
 echo
 #Send arp request without first being added to the DHCP or Static ARP table
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py

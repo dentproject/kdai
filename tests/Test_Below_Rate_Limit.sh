@@ -122,7 +122,7 @@ echo
 make -C .. install
 
 echo
-echo "=== Testing DAI Accepts Packets From DHCP Acknowledged Sources ==="
+echo "=== Testing DAI Accepts Packets when Rate Limit is Not Yet Reached ==="
 echo
 
 #Send arp packets above the rate limit
