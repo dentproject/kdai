@@ -222,6 +222,10 @@ static bool is_trusted(const char *interface_name, u16 vlan_id) {
 
 static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
 
+    struct net_device *dev;
+    struct ethhdr * eth;
+    u16 vlan_id;
+
     if (unlikely(!skb)) {
         // Drop if skb is NULL
         printk(KERN_INFO "kdai: SKB was null");
@@ -229,11 +233,8 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         return NF_DROP;  
     }
 
-    struct net_device *dev;
-    struct ethhdr * eth;
     dev = skb->dev;
     eth = eth_hdr(skb);
-    u16 vlan_id;
 
     //Used only for debugging purpouses
     if(strcmp(dev->name,"enp0s7")==0 || strcmp(dev->name,"ma1")==0 ){
@@ -337,6 +338,8 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
         struct timespec ts;
     #endif
     struct dhcp_snooping_entry* entry;
+    __be16 encapsulated_proto;
+
     if (unlikely(!skb)) {
         printk(KERN_INFO "kdai: Skb was null\n");
         printk(KERN_INFO "kdai: DROPPING\n\n");
@@ -352,7 +355,7 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
         skb_set_transport_header(skb, skb_network_offset(skb) + ip_hdr(skb)->ihl * 4);
     }
 
-    __be16 encapsulated_proto = vlan_get_protocol(skb);
+    encapsulated_proto = vlan_get_protocol(skb);
     if (encapsulated_proto != htons(ETH_P_IP)) {
         printk(KERN_INFO "kdai: Not an IPv4 packet, skipping -> ACCEPTING\n");
         printk(KERN_INFO "kdai: ACCEPTING\n\n");
