@@ -5,8 +5,18 @@
 #include "vlan.h"
 #include "errno.h"
 #include <linux/netfilter_bridge.h>
-#include <linux/if_vlan.h>  // For VLAN related operations
+#include <linux/if_vlan.h>  
+#include <linux/moduleparam.h>
+#include <linux/module.h>
 
+
+bool globally_enabled_DAI = false; //Default is false
+module_param(globally_enabled_DAI, bool, 0644);
+MODULE_PARM_DESC(globally_enabled_DAI, "Enable or disable DAI Inspection for all Packets. All packets will be assumed to be in the same VLAN.");
+
+bool static_ACL_Enabled = false; //Default is false
+module_param(static_ACL_Enabled, bool, 0644);
+MODULE_PARM_DESC(static_ACL_Enabled, "Enable or disable DAI Inspection using static ACLs ONLY. Static Entries for packets not found in the ARP table will be dropped.");
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("M. Sami GURPINAR <sami.gurpinar@gmail.com>. Edited by Korel Ucpinar <korelucpinar@gmail.com>");
@@ -17,9 +27,6 @@ MODULE_VERSION("0.1");
 
 static struct nf_hook_ops* ipho = NULL;
 static struct nf_hook_ops* brho = NULL;
-bool globally_enabled_DAI;
-bool static_ACL_Enabled;
-
 
 static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha, 
     u32 sip, unsigned char* tha, u32 tip)  {
@@ -469,11 +476,15 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
 
 
 static int __init kdai_init(void) {   
+
+    printk(KERN_INFO "kdai: Module loaded with parameters:\n");
+    printk(KERN_INFO "kdai: globally_enabled_DAI=%d, static_ACL_Enabled=%d\n\n", 
+        globally_enabled_DAI, static_ACL_Enabled);
     init_vlan_hash_table();
 
     //Configurations 
-    globally_enabled_DAI = false;
-    static_ACL_Enabled = false;
+    //globally_enabled_DAI = false;
+    //static_ACL_Enabled = false;
     //Enable DAI on all untagged packets
     add_vlan_to_inspect(0); 
 
@@ -518,7 +529,7 @@ static int __init kdai_init(void) {
     
     dhcp_thread = kthread_run(dhcp_thread_handler, NULL, "DHCP Thread");
     if(dhcp_thread) {
-        printk(KERN_INFO"kdai: DHCP Thread Created Successfully...\n");
+        printk(KERN_INFO "kdai: DHCP Thread Created Successfully to Remove Expired Entries...\n");
     } else {
         printk(KERN_INFO"kdai: Cannot create kthread\n");
         goto err;

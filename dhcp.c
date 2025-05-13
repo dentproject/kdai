@@ -73,7 +73,8 @@ void clean_dhcp_snooping_table(void) {
     spin_unlock_irqrestore(&slock, flags);
 }
 
-
+//Continuously check the list of DHCP snooping entries and remove any entries that ave expired based on their
+//expiration time
 int dhcp_thread_handler(void *arg) {
     struct list_head* curr, *next;
     struct dhcp_snooping_entry* entry;
