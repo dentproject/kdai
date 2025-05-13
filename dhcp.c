@@ -7,7 +7,7 @@ DEFINE_SPINLOCK(slock);
 
 struct task_struct* dhcp_thread = NULL;
 
-void insert_dhcp_snooping_entry(u8 *mac, u32 ip, u32 lease_time, u32 expire_time) {
+void insert_dhcp_snooping_entry(u8 *mac, u32 ip, u32 lease_time, u32 expire_time, u16 vlan_id) {
     struct dhcp_snooping_entry* entry;
     unsigned long flags;
 
@@ -19,6 +19,7 @@ void insert_dhcp_snooping_entry(u8 *mac, u32 ip, u32 lease_time, u32 expire_time
     entry->ip = ip;
     entry->lease_time = lease_time;
     entry->expires = expire_time;
+    entry->vlan_id = vlan_id;
     memcpy(entry->mac, mac, ETH_ALEN);
     
     spin_lock_irqsave(&slock, flags);
@@ -27,7 +28,7 @@ void insert_dhcp_snooping_entry(u8 *mac, u32 ip, u32 lease_time, u32 expire_time
 }
 
 
-struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip) {
+struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip, u16 vlan_id) {
     struct list_head* curr, *next;
     struct dhcp_snooping_entry* entry;
     unsigned long flags;
@@ -35,7 +36,7 @@ struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip) {
     spin_lock_irqsave(&slock, flags);
     list_for_each_safe(curr, next, &dhcp_snooping_list) {
         entry = list_entry(curr, struct dhcp_snooping_entry, list);
-        if (entry->ip == ip) {
+        if (entry->ip == ip && entry->vlan_id == vlan_id) {
             spin_unlock_irqrestore(&slock, flags);
             return entry;
         }
@@ -45,9 +46,9 @@ struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip) {
 }
 
 
-void delete_dhcp_snooping_entry(u32 ip) {
+void delete_dhcp_snooping_entry(u32 ip, u16 vlan_id) {
     unsigned long flags;
-    struct dhcp_snooping_entry* entry = find_dhcp_snooping_entry(ip);
+    struct dhcp_snooping_entry* entry = find_dhcp_snooping_entry(ip, vlan_id);
 
     if (entry) {
         spin_lock_irqsave(&slock, flags);
