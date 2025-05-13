@@ -54,6 +54,7 @@ struct dhcp_snooping_entry {
     u8 mac[ETH_ALEN];
     u32 lease_time;
     u32 expires;
+    u16 vlan_id;
     struct list_head list;
 };
 
@@ -61,11 +62,11 @@ extern struct task_struct* dhcp_thread;
 
 int dhcp_is_valid(struct sk_buff* skb);
 
-void insert_dhcp_snooping_entry(u8* mac, u32 ip, u32 lease_time, u32 expire_time);
+void insert_dhcp_snooping_entry(u8* mac, u32 ip, u32 lease_time, u32 expire_time, u16 vlan_id);
 
-struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip);
+struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip, u16 vlan_id);
 
-void delete_dhcp_snooping_entry(u32 ip);
+void delete_dhcp_snooping_entry(u32 ip, u16 vlan_id);
 
 void clean_dhcp_snooping_table(void);
 
