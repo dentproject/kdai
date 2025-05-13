@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Test_DAI_Allows_Communication_from_DHCP_Acknowledged_Sources.sh
-# This script checks if the kernel module drops packets after the defualt 15 packets per second rate limit was exceeded
+# Test_Below_Rate_Limit.sh
+# This script checks if the kernel module does NOT drop packets below the defualt 15 packets per second rate limit
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -122,16 +122,27 @@ echo
 make -C .. install
 
 echo
-echo "=== Testing DAI Accepts Packets From DHCP Acknowledged Sources ==="
+echo "=== Testing DAI Accepts Packets when Rate Limit is Not Yet Reached ==="
 echo
+
 #Send arp packets above the rate limit
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/send_ARP_Packets_Above_Limit.py
-ARP_DROP_STATUS=$(sudo dmesg | grep "DROPPING")
-ARP_EXIT_STATUS=$(sudo dmesg | grep "Packet hit the rate limit.")
+sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/send_ARP_Packets_Below_Limit.py
+sudo dmesg | grep "DROPPING"
+if ! dmesg | grep -q "Packet hit the rate limit."; then
+    # Pattern not found
+    echo "Packet hit the rate limit.' was NOT found"
+    
+    echo
+    echo "Test Passed!"     
+    echo
+    
+    sudo dmesg -n 7
+    exit 
+else
+    # Pattern was found
+    echo "Failed: 'Packet hit the rate limit.' WAS found"
 
+    sudo dmesg -n 7
+    exit 
+fi
 
-echo
-echo "Test Passed!"     
-echo
-sudo dmesg -n 7
-exit 

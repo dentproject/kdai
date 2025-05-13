@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Test_Communication_from_Unacknowledged_Sources.sh.sh
-# This script checks if the kernel module Accepts packets that were NOT added to the DHCP snooping table
+# Test_Above_Rate_Limit.sh
+# This script checks if the kernel module drops packets after the defualt 15 packets per second rate limit was exceeded
 
-set -euo pipefail  # Safer bash: treat unset vars as errors
+set -euo pipefail  #treat unset vars as errors
 
 # Track current command for debugging
 last_command=""
@@ -31,7 +31,7 @@ cleanup() {
     sudo ip netns delete ns1 || true
     sudo ip netns delete ns2 || true
     sudo ip link delete br1 || true
-
+    echo
     echo "=== Clean-up Complete ==="
 }
 
@@ -117,20 +117,21 @@ make -C ..
 
 echo
 echo "=== Running make install to insert the module ==="
+
 echo
 make -C .. install
 
 echo
-echo "=== Testing DAI Filtering From Unacknowledged Sources ==="
+echo "=== Testing DAI Drops Packets When Rate Limit is Reached ==="
 echo
-#Send arp request without first being added to the DHCP or Static ARP table
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
-
-ARP_DROP_STATUS=$(sudo dmesg | tail -n 20 | grep "DROPPING")
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 20 | grep "It is not possible to Validate Source.")
+#Send arp packets above the rate limit
+sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/send_ARP_Packets_Above_Limit.py
+ARP_DROP_STATUS=$(sudo dmesg | grep "DROPPING")
+ARP_EXIT_STATUS=$(sudo dmesg | grep "Packet hit the rate limit.")
 
 
 echo
-echo "Test Passed!"          
+echo "Test Passed!"     
+echo
 sudo dmesg -n 7
-exit 0
+exit 
