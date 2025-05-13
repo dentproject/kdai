@@ -18,6 +18,11 @@ bool static_ACL_Enabled = false; //Default is false
 module_param(static_ACL_Enabled, bool, 0644);
 MODULE_PARM_DESC(static_ACL_Enabled, "Enable or disable DAI Inspection using static ACLs ONLY. Static Entries for packets not found in the ARP table will be dropped.");
 
+char * vlans_to_inspect = NULL; //Default is None
+module_param(vlans_to_inspect, charp, 0644);
+MODULE_PARM_DESC(vlans_to_inspect, "Comma-separated list of VLANs DAI should inspect");
+
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("M. Sami GURPINAR <sami.gurpinar@gmail.com>. Edited by Korel Ucpinar <korelucpinar@gmail.com>");
 MODULE_DESCRIPTION("kdai(Kernel Dynamic ARP Inspection) is a linux kernel module to defend against arp spoofing");
@@ -480,14 +485,13 @@ static int __init kdai_init(void) {
     printk(KERN_INFO "kdai: Module loaded with parameters:\n");
     printk(KERN_INFO "kdai: globally_enabled_DAI=%d, static_ACL_Enabled=%d\n\n", 
         globally_enabled_DAI, static_ACL_Enabled);
+    
+    
     init_vlan_hash_table();
+    parse_vlans(vlans_to_inspect);
 
-    //Configurations 
-    //globally_enabled_DAI = false;
-    //static_ACL_Enabled = false;
     //Enable DAI on all untagged packets
     add_vlan_to_inspect(0); 
-
 
     //Additional Configuraitons
     //insert_trusted_interface("enp0s4", 0);

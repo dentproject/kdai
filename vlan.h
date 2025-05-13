@@ -14,3 +14,5 @@ void remove_vlan_from_inspect(u16 vlan_id);
 void print_all_vlans_in_hash(void);
 
 void init_vlan_hash_table(void);
+
+void parse_vlans(char * vlans);
