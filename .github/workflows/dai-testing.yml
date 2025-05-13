@@ -28,3 +28,33 @@ jobs:
       - name: Run Test_Insert_Kernel_Module
         working-directory: ./tests
         run: ./Test_Insert_Kernel_Module.sh
+
+      # Run Test_Communication_from_Unacknowledged_Sources
+      - name: Run Test_Communication_from_Unacknowledged_Sources
+        working-directory: ./tests
+        run: ./Test_Communication_from_Unacknowledged_Sources.sh
+
+      # Run Test_Communication_from_Acknowledged_Sources
+      - name: Run Test_Communication_from_Acknowledged_Sources
+        working-directory: ./tests
+        run: ./Test_Communication_from_Acknowledged_Sources.sh
+
+      # Run Test_ARP_Poisoning
+      - name: Run Test_ARP_Poisoning
+        working-directory: ./tests
+        run: ./Test_ARP_Poisoning.sh
+
+      # Run Test_Malformed_ARP_Request
+      - name: Run Test_Malformed_ARP_Request
+        working-directory: ./tests
+        run: ./Test_Malformed_ARP_Request.sh
+
+      # Run Test_Static_Entry_In_The_ARP_Table
+      - name: Run Test_Static_Entry_In_The_ARP_Table
+        working-directory: ./tests
+        run: ./Test_Static_Entry_In_The_ARP_Table.sh
+
+      # Run Test_Rate_Limiting
+      - name: Run Test_Rate_Limiting
+        working-directory: ./tests
+        run: ./Test_Rate_Limiting.sh
