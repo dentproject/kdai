@@ -127,7 +127,6 @@ echo
 
 #Send arp packets above the rate limit
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/send_ARP_Packets_Below_Limit.py
-sudo dmesg | grep "DROPPING"
 if ! dmesg | grep -q "Packet hit the rate limit."; then
     # Pattern not found
     echo "Packet hit the rate limit.' was NOT found"
