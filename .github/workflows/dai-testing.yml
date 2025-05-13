@@ -48,3 +48,8 @@ jobs:
       - name: Run Test_Malformed_ARP_Request
         working-directory: ./tests
         run: ./Test_Malformed_ARP_Request.sh
+
+      # Run Test_Static_Entry_In_The_ARP_Table
+      - name: Run Test_Static_Entry_In_The_ARP_Table
+        working-directory: ./tests
+        run: ./Test_Static_Entry_In_The_ARP_Table.sh
