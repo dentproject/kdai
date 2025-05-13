@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Test_DAI_Allows_Communication_from_DHCP_Acknowledged_Sources.sh
+# Test_Above_Rate_Limit.sh
 # This script checks if the kernel module drops packets after the defualt 15 packets per second rate limit was exceeded
 
 set -euo pipefail  #treat unset vars as errors
