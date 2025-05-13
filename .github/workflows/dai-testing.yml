@@ -21,4 +21,5 @@ jobs:
 
       # Run Test_Build_Kernel_Module
       - name: Run Test_Build_Kernel_Module
-        run: ./tests/Test_Build_Kernel_Module.sh
+        working-directory: ./tests
+        run: ./Test_Build_Kernel_Module.sh
