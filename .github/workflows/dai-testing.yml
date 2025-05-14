@@ -17,7 +17,10 @@ jobs:
       
        # Set all script permissions
       - name: Make test script executable
-        run: chmod +x ./tests/*
+        run: |
+            chmod +x ./tests/*.sh
+            chmod +x ./tests/testenv/*.sh
+
 
       # Run Test_Build_Kernel_Module
       - name: Run Test_Build_Kernel_Module
