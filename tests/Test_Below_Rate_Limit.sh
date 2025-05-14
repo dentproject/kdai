@@ -116,10 +116,11 @@ echo
 make -C ..
 
 echo
-echo "=== Running make install to insert the module ==="
+echo "=== Running make load_with_params to insert the module ==="
 
 echo
-make -C .. install
+make -C .. load_with_params
+sudo modprobe kdai vlans_to_inspect="0,10"
 
 echo
 echo "=== Testing DAI Accepts Packets when Rate Limit is Not Yet Reached ==="
@@ -127,7 +128,6 @@ echo
 
 #Send arp packets above the rate limit
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/send_ARP_Packets_Below_Limit.py
-sudo dmesg | grep "DROPPING"
 if ! dmesg | grep -q "Packet hit the rate limit."; then
     # Pattern not found
     echo "Packet hit the rate limit.' was NOT found"

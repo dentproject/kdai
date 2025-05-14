@@ -5,7 +5,26 @@
 #include "vlan.h"
 #include "errno.h"
 #include <linux/netfilter_bridge.h>
-#include <linux/if_vlan.h>  // For VLAN related operations
+#include <linux/if_vlan.h>  
+#include <linux/moduleparam.h>
+#include <linux/module.h>
+
+
+bool globally_enabled_DAI = false; //Default is false
+module_param(globally_enabled_DAI, bool, 0644);
+MODULE_PARM_DESC(globally_enabled_DAI, "Enable or disable DAI Inspection for all Packets. All packets will be assumed to be in the same VLAN.");
+
+bool static_ACL_Enabled = false; //Default is false
+module_param(static_ACL_Enabled, bool, 0644);
+MODULE_PARM_DESC(static_ACL_Enabled, "Enable or disable DAI Inspection using static ACLs ONLY. Static Entries for packets not found in the ARP table will be dropped.");
+
+char * vlans_to_inspect = NULL; //Default is None
+module_param(vlans_to_inspect, charp, 0644);
+MODULE_PARM_DESC(vlans_to_inspect, "Comma-separated list of VLANs DAI should inspect");
+
+char * trusted_interfaces = NULL; //Default is None
+module_param(trusted_interfaces, charp, 0644);
+MODULE_PARM_DESC(trusted_interfaces, "Comma-separated list of Interfaces:VLAN_ID that are considered to be trusted");
 
 
 MODULE_LICENSE("GPL");
@@ -17,9 +36,6 @@ MODULE_VERSION("0.1");
 
 static struct nf_hook_ops* ipho = NULL;
 static struct nf_hook_ops* brho = NULL;
-bool globally_enabled_DAI;
-bool static_ACL_Enabled;
-
 
 static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha, 
     u32 sip, unsigned char* tha, u32 tip)  {
@@ -206,6 +222,10 @@ static bool is_trusted(const char *interface_name, u16 vlan_id) {
 
 static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
 
+    struct net_device *dev;
+    struct ethhdr * eth;
+    u16 vlan_id;
+
     if (unlikely(!skb)) {
         // Drop if skb is NULL
         printk(KERN_INFO "kdai: SKB was null");
@@ -213,11 +233,8 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         return NF_DROP;  
     }
 
-    struct net_device *dev;
-    struct ethhdr * eth;
     dev = skb->dev;
     eth = eth_hdr(skb);
-    u16 vlan_id;
 
     //Used only for debugging purpouses
     if(strcmp(dev->name,"enp0s7")==0 || strcmp(dev->name,"ma1")==0 ){
@@ -321,6 +338,8 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
         struct timespec ts;
     #endif
     struct dhcp_snooping_entry* entry;
+    __be16 encapsulated_proto;
+
     if (unlikely(!skb)) {
         printk(KERN_INFO "kdai: Skb was null\n");
         printk(KERN_INFO "kdai: DROPPING\n\n");
@@ -336,7 +355,7 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
         skb_set_transport_header(skb, skb_network_offset(skb) + ip_hdr(skb)->ihl * 4);
     }
 
-    __be16 encapsulated_proto = vlan_get_protocol(skb);
+    encapsulated_proto = vlan_get_protocol(skb);
     if (encapsulated_proto != htons(ETH_P_IP)) {
         printk(KERN_INFO "kdai: Not an IPv4 packet, skipping -> ACCEPTING\n");
         printk(KERN_INFO "kdai: ACCEPTING\n\n");
@@ -469,20 +488,14 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
 
 
 static int __init kdai_init(void) {   
+
     init_vlan_hash_table();
+    parse_vlans(vlans_to_inspect);
+    parse_interfaces_and_vlan(trusted_interfaces);
 
-    //Configurations 
-    globally_enabled_DAI = false;
-    static_ACL_Enabled = false;
-    //Enable DAI on all untagged packets
-    add_vlan_to_inspect(0); 
-
-
-    //Additional Configuraitons
-    //insert_trusted_interface("enp0s4", 0);
-    //insert_trusted_interface("enp0s6", 0);
-    add_vlan_to_inspect(10);
-
+    printk(KERN_INFO "kdai: Module loaded with parameters:\n");
+    printk(KERN_INFO "kdai: globally_enabled_DAI=%d, static_ACL_Enabled=%d\n\n", 
+        globally_enabled_DAI, static_ACL_Enabled);
     print_trusted_interface_list();
     print_all_vlans_in_hash();
    
@@ -518,7 +531,7 @@ static int __init kdai_init(void) {
     
     dhcp_thread = kthread_run(dhcp_thread_handler, NULL, "DHCP Thread");
     if(dhcp_thread) {
-        printk(KERN_INFO"kdai: DHCP Thread Created Successfully...\n");
+        printk(KERN_INFO "kdai: DHCP Thread Created Successfully to Remove Expired Entries...\n");
     } else {
         printk(KERN_INFO"kdai: Cannot create kthread\n");
         goto err;

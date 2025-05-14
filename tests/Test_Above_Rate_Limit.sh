@@ -116,10 +116,11 @@ echo
 make -C ..
 
 echo
-echo "=== Running make install to insert the module ==="
+echo "=== Running make load_with_params to insert the module ==="
 
 echo
-make -C .. install
+make -C .. load_with_params
+sudo modprobe kdai vlans_to_inspect="0,10"
 
 echo
 echo "=== Testing DAI Drops Packets When Rate Limit is Reached ==="
