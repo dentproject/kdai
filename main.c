@@ -500,10 +500,6 @@ static int __init kdai_init(void) {
 
     //Enable DAI on all untagged packets
     add_vlan_to_inspect(0); 
-
-    //Additional Configuraitons
-    //insert_trusted_interface("enp0s4", 0);
-    //insert_trusted_interface("enp0s6", 0);
     add_vlan_to_inspect(10);
 
     print_trusted_interface_list();
