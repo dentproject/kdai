@@ -62,7 +62,7 @@ int insert_trusted_interface(const char *device_name, u16 vlan_id) {
     list_add_tail(&new_entry->list, &trusted_interface_list);
     trusted_list_size++;
 
-    printk(KERN_INFO "Added interface: %s\n", new_entry->name);
+    //printk(KERN_INFO "Added interface: %s\n", new_entry->name);
 
     return 1;
 }
@@ -107,14 +107,14 @@ void print_trusted_interface_list(void) {
     //If the list is empty notify the user
     if(trusted_list_size == 0) {
         printk(KERN_INFO "kdai: The list is currently empty!\n");
-        printk(KERN_INFO "kdai: All interfaces are assumed Untrusted.\n");
+        printk(KERN_INFO "kdai: All interfaces are Untrusted.\n");
         printk(KERN_INFO "kdai: ---- End of Trusted Network Interfaces List ---\n\n");
         return;
     }
 
     //Iterate and print each entry
     list_for_each_entry(entry, &trusted_interface_list, list) {
-        printk(KERN_INFO " - Interface:\t%s \t\t VLAN:%u\n", entry->name, entry->vlan_id);
+        printk(KERN_INFO " - VLAN ID:\t%u \t\t Interface:\t%s\n",  entry->vlan_id, entry->name);
     }
     
     printk(KERN_INFO "kdai: ---- End of Trusted Network Interfaces List ---\n\n");
@@ -142,3 +142,48 @@ void free_trusted_interface_list(void) {
     }
 }
 
+
+//Taken a string of comma seperated vlans and add those vlans to the inspection list
+void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
+    char * token;
+    char * vlan_id_str;
+    char * str;
+    char *to_free;
+    u16 vlan_id;
+
+    if(interfaces_and_vlan==NULL){
+        return;
+    }
+
+    //Duplicate the string to safely modify it
+    to_free = kstrdup(interfaces_and_vlan,GFP_KERNEL);
+    str = to_free;
+
+    //Split the interfaces_and_vlan string into parts 
+    //Ex. enp0s1:100,enp0s2:200,enp0s3:300 -> enp0s1:100'\0'enp0s2:200'\0'enp0s3:300'\0'
+    while( (token = strsep(&str, ",")) != NULL) {
+        //Token will return the start of the string
+        //Ex. enp0s1:100
+
+        //Find the deliminator and null terminate the interface from the vlan;
+        vlan_id_str = strstr(token, ":");
+        if (!vlan_id_str) {
+            printk(KERN_INFO "Invalid format (missing colon): %s\n", token);
+            continue;
+        }
+        *vlan_id_str='\0';
+        //Move to the start of the vlan_id
+        vlan_id_str++;
+
+        //Convert the token into an unsigned 16 bit integer
+        if(kstrtou16(vlan_id_str, 10, &vlan_id) == 0){
+            //After converting add the interface and vlan to the trusted list
+            insert_trusted_interface(token, vlan_id);
+        } else {
+            printk(KERN_INFO "Invalid VLAN_ID: %s\n", token);
+        }
+    }
+    //Free the allocated memory
+    kfree(to_free);
+
+}
