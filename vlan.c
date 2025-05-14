@@ -2,11 +2,13 @@
 #include <linux/kernel.h>
 #include <linux/hash.h>
 #include <linux/slab.h>
+#include<linux/sort.h>
 
 #define VLAN_HASH_BITS 8
 #define VLAN_HASH_SIZE (1 << VLAN_HASH_BITS)
 
 static struct hlist_head vlan_hash_table[VLAN_HASH_SIZE];
+int currentNumberOfVLANs;
 
 // Hash function
 static inline unsigned int vlan_hash(u16 vlan_id) {
@@ -22,11 +24,19 @@ void init_vlan_hash_table(void) {
 
 // Add VLAN to be inspected
 void add_vlan_to_inspect(u16 vlan_id) {
-    unsigned int hash = vlan_hash(vlan_id);
-    struct vlan_hash_entry *entry = kmalloc(sizeof(struct vlan_hash_entry), GFP_KERNEL);
+    unsigned int hash;
+    struct vlan_hash_entry *entry;
+    if(vlan_should_be_inspected(vlan_id)){
+        //We already have this vlan
+        return;
+    }
+
+    hash = vlan_hash(vlan_id);
+    entry = kmalloc(sizeof(struct vlan_hash_entry), GFP_KERNEL);
     if (!entry)
         return;
 
+    currentNumberOfVLANs++;
     entry->vlan_id = vlan_id;
     hlist_add_head(&entry->node, &vlan_hash_table[hash]);
 }
@@ -57,18 +67,79 @@ void remove_vlan_from_inspect(u16 vlan_id) {
     }
 }
 
-// Print all VLANs currently in the hash table
+int compare_u16(const void * a, const void * b){
+    return *(u16 *)a - *(u16 *)b;
+}
 void print_all_vlans_in_hash(void) {
     int i;
+    int count = 0;
     struct vlan_hash_entry *entry;
+    u16 *vlan_ids;  // Dynamically allocated array
 
-    printk(KERN_INFO "kdai: ---- VLANs in Hash Table ----\n");
-
+    // Calculate the total number of VLANs first
     for (i = 0; i < VLAN_HASH_SIZE; i++) {
         hlist_for_each_entry(entry, &vlan_hash_table[i], node) {
-            printk(KERN_INFO "kdai: VLAN ID: %u \t(Hash Index: %d)\n", entry->vlan_id, i);
+            count++;
         }
     }
 
+    // Allocate memory for vlan_ids dynamically
+    vlan_ids = kmalloc_array(count, sizeof(u16), GFP_KERNEL);
+    if (!vlan_ids) {
+        printk(KERN_ERR "Memory allocation failed for VLAN list\n");
+        return;
+    }
+
+    // Now fill the vlan_ids array with VLAN IDs
+    count = 0;  // Reset count to reuse it for adding VLANs
+    for (i = 0; i < VLAN_HASH_SIZE; i++) {
+        hlist_for_each_entry(entry, &vlan_hash_table[i], node) {
+            vlan_ids[count++] = entry->vlan_id;
+        }
+    }
+
+    // Sort the VLAN IDs
+    sort(vlan_ids, count, sizeof(u16), compare_u16, NULL);
+
+    // Print the sorted VLAN IDs
+    printk(KERN_INFO "kdai: ---- VLANs to Inspect ----\n");
+    for (i = 0; i < count; i++) {
+        printk(KERN_INFO " - VLAN ID:\t%u\n", vlan_ids[i]);
+    }
     printk(KERN_INFO "kdai: ---- End of VLAN List ----\n\n");
+
+    // Free the dynamically allocated memory
+    kfree(vlan_ids);
+}
+//Taken a string of comma seperated vlans and add those vlans to the inspection list
+void parse_vlans(char * vlans) {
+    char * token;
+    char * str;
+    char *to_free;
+
+    if(vlans==NULL){
+        return;
+    }
+
+    //Duplicate the string to safely modify it
+    to_free = kstrdup(vlans,GFP_KERNEL);
+    str = to_free;
+
+    //Split the vlan string into parts 
+    //Ex. 100,200,300 -> 100'\0'200'\0'300'\0'
+    while( (token = strsep(&str, ",")) != NULL) {
+        //Token will return the start of the string
+        u16 vlan_id;
+
+        //Conver the token into an unsigned 16 bit integer
+        if(kstrtou16(token, 10, &vlan_id) == 0){
+            //After converting add the vlan to the inpsection list
+            add_vlan_to_inspect(vlan_id); 
+        } else {
+            printk(KERN_INFO "Invalid VLAN_ID: %s\n", token);
+        }
+    }
+    //Free the allocated memory
+    kfree(to_free);
+
 }
