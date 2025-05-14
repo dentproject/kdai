@@ -63,3 +63,33 @@ jobs:
       - name: Run Test_Below_Rate_Limit
         working-directory: ./tests
         run: ./Test_Below_Rate_Limit.sh
+
+      # Run Test_add_VLAN_to_Inspect
+      - name: Run Test_add_VLAN_to_Inspect
+        working-directory: ./tests
+        run: ./Test_add_VLAN_to_Inspect.sh
+
+      # Run Test_globally_enabled_DAI
+      - name: Run Test_globally_enabled_DAI
+        working-directory: ./tests
+        run: ./Test_globally_enabled_DAI.sh
+
+      # Run Test_Load_With_Params_Kernel_Module
+      - name: Run Test_Load_With_Params_Kernel_Module
+        working-directory: ./tests
+        run: ./Test_Load_With_Params_Kernel_Module.sh   
+
+      # Run Test_static_ACL_Enabled
+      - name: Run Test_static_ACL_Enabled
+        working-directory: ./tests
+        run: ./Test_static_ACL_Enabled.sh   
+
+      # Run Test_Trusted_Interfaces
+      - name: Run Test_Trusted_Interfaces
+        working-directory: ./tests
+        run: ./Test_Trusted_Interfaces.sh   
+              
+      # Run Test_Untrusted_Interfaces
+      - name: Run Test_Untrusted_Interfaces
+        working-directory: ./tests
+        run: ./Test_Untrusted_Interfaces.sh   
