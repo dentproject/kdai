@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Test_Communication_from_Acknowledged_Sources.sh
-# This script checks if the kernel module Accepts packets that were added to the DHCP snooping table
+# Test_Trusted_Interfaces.sh
+# This script checks if the kernel module Accepts packets that cam in on trusted interfaces
 
 set -euo pipefail  #treat unset vars as errors
 

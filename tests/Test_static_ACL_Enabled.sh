@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Test_Communication_from_Acknowledged_Sources.sh
-# This script checks if the kernel module Accepts packets that were added to the DHCP snooping table
+# Test_static_ACL_Enabled.sh
+# This script checks if the kernel module Accepts packets that were added statically and rejects them if they were not. It does not check the DHCP snooping table
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -122,7 +122,7 @@ make -C .. load_with_params
 sudo modprobe kdai vlans_to_inspect="0,10" static_ACL_Enabled=1
 
 echo
-echo "=== Testing DAI Accepts Packets From DHCP Acknowledged Sources ==="
+echo "=== Testing DAI rejcets all non Static Configurations ==="
 echo
 # Create and send the switch a Cusotm DHCP packet ACK for both 192.168.1.1 and 192.168.1.2 with VLAN_ID 10
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/DHCP_with_VLAN_10.py
