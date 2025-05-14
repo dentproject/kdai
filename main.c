@@ -25,6 +25,26 @@ MODULE_PARM_DESC(vlans_to_inspect, "Comma-separated list of VLANs DAI should ins
 char * trusted_interfaces = NULL; //Default is None
 module_param(trusted_interfaces, charp, 0644);
 MODULE_PARM_DESC(trusted_interfaces, "Comma-separated list of Interfaces:VLAN_ID that are considered to be trusted");
+#include <linux/if_vlan.h>  
+#include <linux/moduleparam.h>
+#include <linux/module.h>
+
+
+bool globally_enabled_DAI = false; //Default is false
+module_param(globally_enabled_DAI, bool, 0644);
+MODULE_PARM_DESC(globally_enabled_DAI, "Enable or disable DAI Inspection for all Packets. All packets will be assumed to be in the same VLAN.");
+
+bool static_ACL_Enabled = false; //Default is false
+module_param(static_ACL_Enabled, bool, 0644);
+MODULE_PARM_DESC(static_ACL_Enabled, "Enable or disable DAI Inspection using static ACLs ONLY. Static Entries for packets not found in the ARP table will be dropped.");
+
+char * vlans_to_inspect = NULL; //Default is None
+module_param(vlans_to_inspect, charp, 0644);
+MODULE_PARM_DESC(vlans_to_inspect, "Comma-separated list of VLANs DAI should inspect");
+
+char * trusted_interfaces = NULL; //Default is None
+module_param(trusted_interfaces, charp, 0644);
+MODULE_PARM_DESC(trusted_interfaces, "Comma-separated list of Interfaces:VLAN_ID that are considered to be trusted");
 
 
 MODULE_LICENSE("GPL");
@@ -226,6 +246,10 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
     struct ethhdr * eth;
     u16 vlan_id;
 
+    struct net_device *dev;
+    struct ethhdr * eth;
+    u16 vlan_id;
+
     if (unlikely(!skb)) {
         // Drop if skb is NULL
         printk(KERN_INFO "kdai: SKB was null");
@@ -340,6 +364,8 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
     struct dhcp_snooping_entry* entry;
     __be16 encapsulated_proto;
 
+    __be16 encapsulated_proto;
+
     if (unlikely(!skb)) {
         printk(KERN_INFO "kdai: Skb was null\n");
         printk(KERN_INFO "kdai: DROPPING\n\n");
@@ -355,6 +381,7 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
         skb_set_transport_header(skb, skb_network_offset(skb) + ip_hdr(skb)->ihl * 4);
     }
 
+    encapsulated_proto = vlan_get_protocol(skb);
     encapsulated_proto = vlan_get_protocol(skb);
     if (encapsulated_proto != htons(ETH_P_IP)) {
         printk(KERN_INFO "kdai: Not an IPv4 packet, skipping -> ACCEPTING\n");
@@ -531,6 +558,7 @@ static int __init kdai_init(void) {
     
     dhcp_thread = kthread_run(dhcp_thread_handler, NULL, "DHCP Thread");
     if(dhcp_thread) {
+        printk(KERN_INFO "kdai: DHCP Thread Created Successfully to Remove Expired Entries...\n");
         printk(KERN_INFO "kdai: DHCP Thread Created Successfully to Remove Expired Entries...\n");
     } else {
         printk(KERN_INFO"kdai: Cannot create kthread\n");
