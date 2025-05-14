@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Test_Communication_from_Acknowledged_Sources.sh
-# This script checks if the kernel module Accepts packets that were added to the DHCP snooping table
+# Test_Untrusted_Interfaces.sh
+# This script checks if the kernel module performs DAI on untrusted interfaces
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -122,7 +122,7 @@ make -C .. load_with_params
 sudo modprobe kdai vlans_to_inspect="0,10"
 
 echo
-echo "=== Testing DAI Accepts Packets From Trusted Interfaces ==="
+echo "=== Testing DAI Accepts Packets From Untrusted Interfaces ==="
 echo
 #Send and ARP Request and wait for a Response
 #Requests will default to VLAN 0, and will match with veth0 and veth3
