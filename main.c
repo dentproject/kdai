@@ -489,19 +489,13 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
 
 static int __init kdai_init(void) {   
 
-    printk(KERN_INFO "kdai: Module loaded with parameters:\n");
-    printk(KERN_INFO "kdai: globally_enabled_DAI=%d, static_ACL_Enabled=%d\n\n", 
-        globally_enabled_DAI, static_ACL_Enabled);
-    
-    
     init_vlan_hash_table();
     parse_vlans(vlans_to_inspect);
     parse_interfaces_and_vlan(trusted_interfaces);
 
-    //Enable DAI on all untagged packets
-    add_vlan_to_inspect(0); 
-    add_vlan_to_inspect(10);
-
+    printk(KERN_INFO "kdai: Module loaded with parameters:\n");
+    printk(KERN_INFO "kdai: globally_enabled_DAI=%d, static_ACL_Enabled=%d\n\n", 
+        globally_enabled_DAI, static_ACL_Enabled);
     print_trusted_interface_list();
     print_all_vlans_in_hash();
    

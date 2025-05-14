@@ -22,7 +22,7 @@ load_with_params:
 	sudo cp kdai.ko ${MDIR}/.
 	sudo depmod
 	@echo "Module is Ready to Load."
-	@echo "Use 'sudo modprobe kdai [globally_enabled_DAI=<0|1> static_ACL_Enabled=<0|1>]' to load the module."
+	@echo "Use 'sudo modprobe kdai [globally_enabled_DAI=<0|1> static_ACL_Enabled=<0|1>...]' to load the module."
 remove:
 	@echo "Removing the module..."
 	sudo modprobe -r kdai
