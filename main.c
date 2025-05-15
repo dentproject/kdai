@@ -281,7 +281,7 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         if(vlan_should_be_inspected(vlan_id) || globally_enabled_DAI) {
             //YES
             //Print Logs
-            if(vlan_should_be_inspected(vlan_id)) printk(KERN_INFO "kdai: vlan_id WAS FOUND in the hash table. INSPECTING\n");
+            if(vlan_should_be_inspected(vlan_id)) printk(KERN_INFO "kdai: vlan_id %u WAS FOUND in the hash table. INSPECTING\n", vlan_id);
             if(globally_enabled_DAI) printk(KERN_INFO "kdai: INSPECTING ALL\n");
 
             //4th Is the interface not trusted?
@@ -313,7 +313,7 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         } else {
             //NO
             //No need to Inspect packet it was not in our list of VLANS to Inspect
-            printk(KERN_INFO "kdai: vlan_id was NOT in the HASH TABLE -> ACCEPTING\n");
+            printk(KERN_INFO "kdai: vlan_id %u was NOT in the HASH TABLE\n", vlan_id);
             printk(KERN_INFO "kdai: ACCEPTING\n\n");
             return NF_ACCEPT;
         }

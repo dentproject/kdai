@@ -59,16 +59,18 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C .. load_with_params
-sudo modprobe kdai vlans_to_inspect="0,10"
+sudo modprobe kdai vlans_to_inspect="10"
 
 echo
 echo "=== Testing DAI compares VLAN_IDs to added entries ==="
 echo
-#Send and ARP Request and wait for a Response
-#Requests will default to VLAN 0, and will match with veth0 and veth3
+#Send ARP Request with a VLAN that is configured for inspection
+sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
+#Send ARP Request with a VLAN that is NOT configured for inspection (Default VLAN_ID)
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id WAS FOUND in the hash table.")
+ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id 10 WAS FOUND in the hash table. INSPECTING")
+ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id 0 was NOT in the HASH TABLE")
 
 echo
 echo "Test Passed!"          
