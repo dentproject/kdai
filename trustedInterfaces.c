@@ -38,6 +38,7 @@ void populate_trusted_interface_list(void) {
 int insert_trusted_interface(const char *device_name, u16 vlan_id) {
 
     struct interface_entry *new_entry;
+    unsigned long flags;
 
     //If we found that device already return
     if(find_trusted_interface(device_name, vlan_id)){
@@ -59,10 +60,10 @@ int insert_trusted_interface(const char *device_name, u16 vlan_id) {
     // Initialize the list field of the new entry
     INIT_LIST_HEAD(&new_entry->list);
     // Add to the end of the list
-    spin_lock(&interface_lock);
+    spin_lock_irqsave(&interface_lock, flags);
     list_add_tail(&new_entry->list, &trusted_interface_list);
     trusted_list_size++;
-    spin_unlock(&interface_lock);
+    spin_unlock_irqrestore(&interface_lock, flags);
     
 
     //printk(KERN_INFO "Added interface: %s\n", new_entry->name);
@@ -83,15 +84,16 @@ int insert_trusted_interface(const char *device_name, u16 vlan_id) {
  */
 const char* find_trusted_interface(const char *interface_name, u16 vlan_id) {
     struct interface_entry *entry;
-    spin_lock(&interface_lock);
+    unsigned long flags;
+    spin_lock_irqsave(&interface_lock, flags);
     // Loop through the list to find a matching interface name
     list_for_each_entry(entry, &trusted_interface_list, list) {
         if (strncmp(entry->name, interface_name, IFNAMSIZ) == 0 && entry->vlan_id == vlan_id) {
-            spin_unlock(&interface_lock);
+            spin_unlock_irqrestore(&interface_lock, flags);
             return entry->name; // Interface found, return interface
         }
     }
-    spin_unlock(&interface_lock);
+    spin_unlock_irqrestore(&interface_lock, flags);
 
     return NULL; // Interface not found, return NULL
 }
@@ -106,6 +108,7 @@ const char* find_trusted_interface(const char *interface_name, u16 vlan_id) {
  */
 void print_trusted_interface_list(void) {
     struct interface_entry *entry;
+    unsigned long flags;
 
     printk(KERN_INFO "kdai: ---- List of trusted network interfaces ---\n");
 
@@ -117,12 +120,12 @@ void print_trusted_interface_list(void) {
         return;
     }
         
-    spin_lock(&interface_lock);
+    spin_lock_irqsave(&interface_lock, flags);
     //Iterate and print each entry
     list_for_each_entry(entry, &trusted_interface_list, list) {
         printk(KERN_INFO " - VLAN ID:\t%u \t\t Interface:\t%s\n",  entry->vlan_id, entry->name);
     }
-    spin_unlock(&interface_lock);
+    spin_unlock_irqrestore(&interface_lock, flags);
     
     printk(KERN_INFO "kdai: ---- End of Trusted Network Interfaces List ---\n\n");
 
@@ -141,14 +144,15 @@ void print_trusted_interface_list(void) {
  */
 void free_trusted_interface_list(void) {
     struct interface_entry *entry, *tmp;
-    spin_lock(&interface_lock);
+    unsigned long flags;
+    spin_lock_irqsave(&interface_lock, flags);
     //Iterate through the list, del and free each entry.
     list_for_each_entry_safe(entry, tmp, &trusted_interface_list, list) {
         list_del(&entry->list);
         kfree(entry);
     }
     trusted_list_size = 0;
-    spin_unlock(&interface_lock);
+    spin_unlock_irqrestore(&interface_lock, flags);
 }
 
 
