@@ -6,6 +6,8 @@
 
 #define VLAN_HASH_BITS 8
 #define VLAN_HASH_SIZE (1 << VLAN_HASH_BITS)
+DEFINE_SPINLOCK(vlan_lock);
+
 
 static struct hlist_head vlan_hash_table[VLAN_HASH_SIZE];
 int currentNumberOfVLANs;
@@ -24,32 +26,46 @@ void init_vlan_hash_table(void) {
 
 // Add VLAN to be inspected
 void add_vlan_to_inspect(u16 vlan_id) {
-    unsigned int hash;
+    unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry;
-    if(vlan_should_be_inspected(vlan_id)){
-        //We already have this vlan
-        return;
+
+    spin_lock(&vlan_lock);
+
+    // Check if the VLAN already exists
+    hlist_for_each_entry(entry, &vlan_hash_table[hash], node) {
+        if (entry->vlan_id == vlan_id) {
+            spin_unlock(&vlan_lock);
+            return;  // VLAN is already in the table, so no need to add it
+        }
     }
 
-    hash = vlan_hash(vlan_id);
-    entry = kmalloc(sizeof(struct vlan_hash_entry), GFP_KERNEL);
-    if (!entry)
-        return;
+    // If we reach here, the VLAN is not in the table, so add it    
+    entry = kmalloc(sizeof(struct vlan_hash_entry), GFP_ATOMIC);
+    if (!entry) {
+        spin_unlock(&vlan_lock);
+        return; // Memory allocation failed
+    }
 
-    currentNumberOfVLANs++;
+    //Create and add new entry
     entry->vlan_id = vlan_id;
     hlist_add_head(&entry->node, &vlan_hash_table[hash]);
+    currentNumberOfVLANs++;
+
+    spin_unlock(&vlan_lock);
 }
 
 // Check if VLAN should be inspected
 bool vlan_should_be_inspected(u16 vlan_id) {
     unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry;
-
+    spin_lock(&vlan_lock);
     hlist_for_each_entry(entry, &vlan_hash_table[hash], node) {
-        if (entry->vlan_id == vlan_id)
+        if (entry->vlan_id == vlan_id) {
+            spin_unlock(&vlan_lock);
             return true;
+        }
     }
+    spin_unlock(&vlan_lock);
     return false;
 }
 
@@ -57,14 +73,17 @@ bool vlan_should_be_inspected(u16 vlan_id) {
 void remove_vlan_from_inspect(u16 vlan_id) {
     unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry;
-
+    spin_lock(&vlan_lock);
     hlist_for_each_entry(entry, &vlan_hash_table[hash], node) {
         if (entry->vlan_id == vlan_id) {
             hlist_del(&entry->node);
             kfree(entry);
+            currentNumberOfVLANs--;
+            spin_unlock(&vlan_lock);
             return;
         }
     }
+    spin_unlock(&vlan_lock);
 }
 
 int compare_u16(const void * a, const void * b){
@@ -72,10 +91,12 @@ int compare_u16(const void * a, const void * b){
 }
 void print_all_vlans_in_hash(void) {
     int i;
-    int count = 0;
     struct vlan_hash_entry *entry;
     u16 *vlan_ids;  // Dynamically allocated array
+    int count;
 
+    spin_lock(&vlan_lock);
+    count = 0;
     // Calculate the total number of VLANs first
     for (i = 0; i < VLAN_HASH_SIZE; i++) {
         hlist_for_each_entry(entry, &vlan_hash_table[i], node) {
@@ -86,6 +107,7 @@ void print_all_vlans_in_hash(void) {
     // Allocate memory for vlan_ids dynamically
     vlan_ids = kmalloc_array(count, sizeof(u16), GFP_KERNEL);
     if (!vlan_ids) {
+        spin_unlock(&vlan_lock);
         printk(KERN_ERR "Memory allocation failed for VLAN list\n");
         return;
     }
@@ -97,6 +119,7 @@ void print_all_vlans_in_hash(void) {
             vlan_ids[count++] = entry->vlan_id;
         }
     }
+    spin_unlock(&vlan_lock);
 
     // Sort the VLAN IDs
     sort(vlan_ids, count, sizeof(u16), compare_u16, NULL);
@@ -151,7 +174,7 @@ void free_all_vlan_entries(void) {
     struct vlan_hash_entry *entry;
     //Temporary pointer used for safe iteraiton
     struct hlist_node *tmp;
-
+    spin_lock(&vlan_lock);
     //Loop through each bucked in the VLAN hash table
     for(i = 0; i < VLAN_HASH_SIZE; i++) {
         //Get the pointer to the current hash bucket
@@ -166,4 +189,5 @@ void free_all_vlan_entries(void) {
     }
     // Reset the global counter tracking number of VLANs
     currentNumberOfVLANs = 0;  
+    spin_unlock(&vlan_lock);
 }
