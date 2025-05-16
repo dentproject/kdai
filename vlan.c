@@ -143,3 +143,27 @@ void parse_vlans(char * vlans) {
     kfree(to_free);
 
 }
+
+void free_all_vlan_entries(void) {
+    //loop counter for hashtable buckets
+    int i;
+    //Pointer to VLAN hash entry for traversal
+    struct vlan_hash_entry *entry;
+    //Temporary pointer used for safe iteraiton
+    struct hlist_node *tmp;
+
+    //Loop through each bucked in the VLAN hash table
+    for(i = 0; i < VLAN_HASH_SIZE; i++) {
+        //Get the pointer to the current hash bucket
+        struct hlist_head * head = &vlan_hash_table[i];
+        //Safely iterate through each entry in the current hash bucket
+        hlist_for_each_entry_safe(entry, tmp, head, node) {
+            //Unlink the entry form the haslist
+            hlist_del(&entry->node);
+            //ree the memory allocated for this entry
+            kfree(entry);
+        }
+    }
+    // Reset the global counter tracking number of VLANs
+    currentNumberOfVLANs = 0;  
+}
