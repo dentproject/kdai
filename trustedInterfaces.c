@@ -2,6 +2,7 @@
 #include "errno.h"
 
 LIST_HEAD(trusted_interface_list);  // Global list head for interfaces
+DEFINE_SPINLOCK(interface_lock);
 static int trusted_list_size = 0;
 
 /**
@@ -57,10 +58,12 @@ int insert_trusted_interface(const char *device_name, u16 vlan_id) {
 
     // Initialize the list field of the new entry
     INIT_LIST_HEAD(&new_entry->list);
-
     // Add to the end of the list
+    spin_lock(&interface_lock);
     list_add_tail(&new_entry->list, &trusted_interface_list);
     trusted_list_size++;
+    spin_unlock(&interface_lock);
+    
 
     //printk(KERN_INFO "Added interface: %s\n", new_entry->name);
 
@@ -80,13 +83,15 @@ int insert_trusted_interface(const char *device_name, u16 vlan_id) {
  */
 const char* find_trusted_interface(const char *interface_name, u16 vlan_id) {
     struct interface_entry *entry;
-
+    spin_lock(&interface_lock);
     // Loop through the list to find a matching interface name
     list_for_each_entry(entry, &trusted_interface_list, list) {
         if (strncmp(entry->name, interface_name, IFNAMSIZ) == 0 && entry->vlan_id == vlan_id) {
+            spin_unlock(&interface_lock);
             return entry->name; // Interface found, return interface
         }
     }
+    spin_unlock(&interface_lock);
 
     return NULL; // Interface not found, return NULL
 }
@@ -111,11 +116,13 @@ void print_trusted_interface_list(void) {
         printk(KERN_INFO "kdai: ---- End of Trusted Network Interfaces List ---\n\n");
         return;
     }
-
+        
+    spin_lock(&interface_lock);
     //Iterate and print each entry
     list_for_each_entry(entry, &trusted_interface_list, list) {
         printk(KERN_INFO " - VLAN ID:\t%u \t\t Interface:\t%s\n",  entry->vlan_id, entry->name);
     }
+    spin_unlock(&interface_lock);
     
     printk(KERN_INFO "kdai: ---- End of Trusted Network Interfaces List ---\n\n");
 
@@ -134,12 +141,14 @@ void print_trusted_interface_list(void) {
  */
 void free_trusted_interface_list(void) {
     struct interface_entry *entry, *tmp;
-
+    spin_lock(&interface_lock);
     //Iterate through the list, del and free each entry.
     list_for_each_entry_safe(entry, tmp, &trusted_interface_list, list) {
         list_del(&entry->list);
         kfree(entry);
     }
+    trusted_list_size = 0;
+    spin_unlock(&interface_lock);
 }
 
 
