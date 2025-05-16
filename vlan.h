@@ -16,3 +16,5 @@ void print_all_vlans_in_hash(void);
 void init_vlan_hash_table(void);
 
 void parse_vlans(char * vlans);
+
+void free_all_vlan_entries(void);

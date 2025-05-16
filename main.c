@@ -563,6 +563,7 @@ static void __exit kdai_exit(void) {
     clean_dhcp_snooping_table();
     kthread_stop(dhcp_thread);
     free_trusted_interface_list();
+    free_all_vlan_entries();
     clean_rate_limit_table();
 
 }
