@@ -59,7 +59,7 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C .. install
-sudo echo "1,10" > /sys/module/kdai/parameters/vlans_to_inspect
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 echo
 echo "=== Testing DAI Malformed ARP Request ==="
 echo

@@ -59,8 +59,8 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C .. install
-sudo echo "1,10" > /sys/module/kdai/parameters/vlans_to_inspect
-echo "veth1:1,veth2:1" > /sys/module/kdai/parameters/trusted_interfaces
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+echo "veth1:1,veth2:1" | sudo tee /sys/module/kdai/parameters/trusted_interfaces
 
 echo
 echo "=== Testing DAI Accepts Packets From Trusted Interfaces ==="

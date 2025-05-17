@@ -26,7 +26,7 @@ echo
 make -C .. install
 
 echo "=== Load the kernel module  and Change the parameters==="
-sudo echo "1,10" > /sys/module/kdai/parameters/vlans_to_inspect
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
 echo "Test Passed!"
