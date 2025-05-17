@@ -164,7 +164,7 @@ void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
     char *to_free;
     u16 vlan_id;
 
-    if(interfaces_and_vlan==NULL){
+    if(interfaces_and_vlan==NULL || *interfaces_and_vlan=='\0'){
         return;
     }
 

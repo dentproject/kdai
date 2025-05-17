@@ -143,7 +143,7 @@ void parse_vlans(char * vlans) {
     char * str;
     char *to_free;
 
-    if(vlans==NULL){
+    if(vlans==NULL || *vlans =='\0'){
         return;
     }
 
