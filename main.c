@@ -377,8 +377,8 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         //2nd Is Global Inspection enabled
         if(globally_enabled_DAI) {
             //YES
-            //Set packet VLAN_id to 0
-            vlan_id = 0;
+            //Set packet VLAN_id to 1
+            vlan_id = 1;
             printk(KERN_INFO "kdai: globally_enabled_DAI was ENABLED\n");
             //Continue checking
         } else {
@@ -393,13 +393,9 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
                 printk(KERN_INFO "kdai: vlan_id found: %u", vlan_id);
             } else {
                 //NO
-                //Global was disabled and VLAN_id was not found, accept packet
-                // printk(KERN_INFO "kdai: vlan_id was NOT in the PACKET -> DROPPING\n");
-                // printk(KERN_INFO "kdai: DROPPING\n\n");
-                // return NF_DROP;
-                //Packets with no VLANs will be inspected.
-                printk(KERN_INFO "kdai: No VLAN was found defaulting to 0\n");
-                vlan_id = 0;
+                //Global was disabled and VLAN_id was not found, default to 1
+                printk(KERN_INFO "kdai: No VLAN was found defaulting to 1\n");
+                vlan_id = 1;
             }
             //Continue checking
         }
@@ -459,6 +455,7 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
     struct dhcp* payload;
     unsigned char* opt;
     u8 dhcp_packet_type;
+    u16  vlan_id;
     u32 lease_time;
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,16,0)
         struct timespec64 ts;
@@ -513,16 +510,15 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
             printk(KERN_INFO "kdai: Saw a valid DHCPACK\n");
             memcpy(&dhcp_packet_type, &payload->bp_options[2], 1);
             printk(KERN_INFO "kdai: DHCP packet type: %u\n", dhcp_packet_type);
-            
+            if (skb_vlan_tag_present(skb)) {
+                vlan_id = skb_vlan_tag_get_id(skb);
+                printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
+            } else {
+                vlan_id = 1;
+                printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 1\n");
+            }
             switch (dhcp_packet_type) {
                 case DHCP_ACK:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     for (opt = payload->bp_options; *opt != DHCP_OPTION_END; opt += opt[1] + 2) {
                         if (*opt == DHCP_OPTION_LEASE_TIME) {
                             memcpy(&lease_time, &opt[2], 4);
@@ -553,13 +549,6 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
                 }
                 
                 case DHCP_NAK:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     printk(KERN_INFO "kdai: DHCPNAK of %pI4\n", &payload->yiaddr);
                     entry = find_dhcp_snooping_entry(payload->yiaddr, vlan_id);
                     if (entry) {
@@ -569,26 +558,12 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
                 }
 
                 case DHCP_RELEASE:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     printk(KERN_INFO "kdai: DHCPRELEASE of %pI4\n", &payload->ciaddr);
                     delete_dhcp_snooping_entry(payload->ciaddr, vlan_id);
                     break;
                 }
 
                 case DHCP_DECLINE:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     printk(KERN_INFO "kdai: DHCPDECLINE of %pI4\n", &payload->ciaddr);
                     delete_dhcp_snooping_entry(payload->ciaddr, vlan_id);
                     break;
