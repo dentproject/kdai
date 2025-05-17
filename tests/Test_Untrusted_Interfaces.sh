@@ -58,14 +58,14 @@ make -C ..
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. load_with_params
-sudo modprobe kdai vlans_to_inspect="0,10"
+make -C .. install
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
 echo "=== Testing DAI Accepts Packets From Untrusted Interfaces ==="
 echo
 #Send and ARP Request and wait for a Response
-#Requests will default to VLAN 0, and will match with veth0 and veth3
+#Requests will default to VLAN 1, and will match with veth0 and veth3
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 
 ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "Interface is UNTRUSTED")

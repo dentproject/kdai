@@ -58,8 +58,8 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 
 echo
-make -C .. load_with_params
-sudo modprobe kdai vlans_to_inspect="0,10"
+make -C .. install
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
 echo "=== Testing DAI Drops Packets When Rate Limit is Reached ==="

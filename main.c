@@ -11,20 +11,148 @@
 
 
 bool globally_enabled_DAI = false; //Default is false
-module_param(globally_enabled_DAI, bool, 0644);
+//module_param(globally_enabled_DAI, bool, 0644);
 MODULE_PARM_DESC(globally_enabled_DAI, "Enable or disable DAI Inspection for all Packets. All packets will be assumed to be in the same VLAN.");
+static int set_globally_enabled_DAI(const char *val, const struct kernel_param *kp)
+{
+    bool tmp;
+    // Convert the input string (e.g., "1" or "true") to a boolean (0 or 1)
+    int ret = kstrtobool(val, &tmp);
+    if (ret < 0) {
+        printk(KERN_INFO "kdai: globally_enabled_DAI was NOT updated, input was invalid\n\n");
+        return ret;
+    }
+
+    // Log the old value before updating and the new value after
+    printk(KERN_INFO "kdai: globally_enabled_DAI was updated from %d to %d\n\n", globally_enabled_DAI, tmp);
+    
+    globally_enabled_DAI = tmp;
+
+    return 0;
+}
+static const struct kernel_param_ops globally_enabled_DAI_ops = {
+    .set = set_globally_enabled_DAI, //This funciton will be called whenever the static_ACL_Enabled variable is written too
+    .get = param_get_bool, //This function will be called whenever the static_ACL_Enabled variable is read
+};
+module_param_cb(globally_enabled_DAI, &globally_enabled_DAI_ops, &globally_enabled_DAI, 0644);
+
 
 bool static_ACL_Enabled = false; //Default is false
-module_param(static_ACL_Enabled, bool, 0644);
+//module_param(static_ACL_Enabled, bool, 0644);
 MODULE_PARM_DESC(static_ACL_Enabled, "Enable or disable DAI Inspection using static ACLs ONLY. Static Entries for packets not found in the ARP table will be dropped.");
+static int set_static_acl(const char *val, const struct kernel_param *kp)
+{
+    bool tmp;
+    // Convert the input string (e.g., "1" or "true") to a boolean (0 or 1)
+    int ret = kstrtobool(val, &tmp);
+    if (ret < 0) {
+        printk(KERN_INFO "kdai: static_ACL_Enabled was NOT updated, input was invalid\n\n");
+        return ret;
+    }
+
+    // Log a message to the kernel log to confirm the update
+    printk(KERN_INFO "kdai: static_ACL_Enabled updated to: %d to %d\n\n", static_ACL_Enabled, tmp);
+
+    static_ACL_Enabled = tmp;
+    return 0;
+}
+static const struct kernel_param_ops static_acl_ops = {
+    .set = set_static_acl, //This funciton will be called whenever the static_ACL_Enabled variable is written too
+    .get = param_get_bool, //This function will be called whenever the static_ACL_Enabled variable is read
+};
+module_param_cb(static_ACL_Enabled, &static_acl_ops, &static_ACL_Enabled, 0644);
+
 
 char * vlans_to_inspect = NULL; //Default is None
-module_param(vlans_to_inspect, charp, 0644);
+//module_param(vlans_to_inspect, charp, 0644);
 MODULE_PARM_DESC(vlans_to_inspect, "Comma-separated list of VLANs DAI should inspect");
+static int set_vlans_to_inspect(const char *val, const struct kernel_param *kp){
+    char *to_free; // Declare to_free for duplicating the string
+    char *str;
+    
+    // If the input string is empty, just return
+    if (val == NULL) {
+        printk(KERN_INFO "kdai: No VLANs to inspect (empty input).\n\n");
+        return 0;
+    }
+    if (*val == '\0') {
+        printk(KERN_INFO "kdai: Clearing VLANs To Inspect list\n\n");
+        free_all_vlan_entries();
+        print_all_vlans_in_hash();
+        return 0;
+    }
+
+    // Parse the incoming string of VLANs
+    to_free = kstrdup(val, GFP_KERNEL);
+    if (!to_free)
+        return -ENOMEM; // Memory allocation failed
+
+    str = to_free;
+
+    //Remove all VLAN_ID entries from the list
+    free_all_vlan_entries();
+
+     //Add all entries that are specified in new val
+    parse_vlans(to_free);
+
+    //Free allocate dmmemory
+    kfree(to_free);
+
+    printk(KERN_INFO "kdai: VLANs to inspect updated.\n\n");
+    print_all_vlans_in_hash();
+    return 0;
+}
+static const struct kernel_param_ops vlans_to_inspect_ops = {
+    .set = set_vlans_to_inspect, //This funciton will be called whenever the static_ACL_Enabled variable is written too
+    .get = param_get_charp, //This function will be called whenever the static_ACL_Enabled variable is read
+};
+module_param_cb(vlans_to_inspect, &vlans_to_inspect_ops, &vlans_to_inspect, 0644);
+
 
 char * trusted_interfaces = NULL; //Default is None
-module_param(trusted_interfaces, charp, 0644);
+//module_param(trusted_interfaces, charp, 0644);
 MODULE_PARM_DESC(trusted_interfaces, "Comma-separated list of Interfaces:VLAN_ID that are considered to be trusted");
+static int set_trusted_interfaces(const char *val, const struct kernel_param *kp){
+    char *to_free; // Declare to_free for duplicating the string
+    char *str;
+    
+    // If the input string is empty, just return
+    if (val == NULL) {
+        printk(KERN_INFO "kdai: Empty input for Trusted Interfaces.\n\n");
+        return 0;
+    }
+    if(*val == '\0') {
+        printk(KERN_INFO "kdai: Clearing Trusted list\n\n");
+        free_trusted_interface_list();
+        print_trusted_interface_list();
+        return 0;
+    }
+
+    // Parse the incoming string of VLANs
+    to_free = kstrdup(val, GFP_KERNEL);
+    if (!to_free)
+        return -ENOMEM; // Memory allocation failed
+
+    str = to_free;
+
+    //Remove all trusted entries from the list
+    free_trusted_interface_list();
+
+    //Add all entries that are specified in new val
+    parse_interfaces_and_vlan(to_free);
+
+    //Free allocate dmmemory
+    kfree(to_free);
+
+    printk(KERN_INFO "kdai: Trusted Interfaces Updated.\n\n");
+    print_trusted_interface_list();
+    return 0;
+}
+static const struct kernel_param_ops trusted_interfaces_ops = {
+    .set = set_trusted_interfaces, //This funciton will be called whenever the static_ACL_Enabled variable is written too
+    .get = param_get_charp, //This function will be called whenever the static_ACL_Enabled variable is read
+};
+module_param_cb(trusted_interfaces, &trusted_interfaces_ops, &trusted_interfaces, 0644);
 
 
 MODULE_LICENSE("GPL");
@@ -249,8 +377,8 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
         //2nd Is Global Inspection enabled
         if(globally_enabled_DAI) {
             //YES
-            //Set packet VLAN_id to 0
-            vlan_id = 0;
+            //Set packet VLAN_id to 1
+            vlan_id = 1;
             printk(KERN_INFO "kdai: globally_enabled_DAI was ENABLED\n");
             //Continue checking
         } else {
@@ -265,13 +393,9 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
                 printk(KERN_INFO "kdai: vlan_id found: %u", vlan_id);
             } else {
                 //NO
-                //Global was disabled and VLAN_id was not found, accept packet
-                // printk(KERN_INFO "kdai: vlan_id was NOT in the PACKET -> DROPPING\n");
-                // printk(KERN_INFO "kdai: DROPPING\n\n");
-                // return NF_DROP;
-                //Packets with no VLANs will be inspected.
-                printk(KERN_INFO "kdai: No VLAN was found defaulting to 0\n");
-                vlan_id = 0;
+                //Global was disabled and VLAN_id was not found, default to 1
+                printk(KERN_INFO "kdai: No VLAN was found defaulting to 1\n");
+                vlan_id = 1;
             }
             //Continue checking
         }
@@ -331,6 +455,7 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
     struct dhcp* payload;
     unsigned char* opt;
     u8 dhcp_packet_type;
+    u16  vlan_id;
     u32 lease_time;
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,16,0)
         struct timespec64 ts;
@@ -385,16 +510,15 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
             printk(KERN_INFO "kdai: Saw a valid DHCPACK\n");
             memcpy(&dhcp_packet_type, &payload->bp_options[2], 1);
             printk(KERN_INFO "kdai: DHCP packet type: %u\n", dhcp_packet_type);
-            
+            if (skb_vlan_tag_present(skb)) {
+                vlan_id = skb_vlan_tag_get_id(skb);
+                printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
+            } else {
+                vlan_id = 1;
+                printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 1\n");
+            }
             switch (dhcp_packet_type) {
                 case DHCP_ACK:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     for (opt = payload->bp_options; *opt != DHCP_OPTION_END; opt += opt[1] + 2) {
                         if (*opt == DHCP_OPTION_LEASE_TIME) {
                             memcpy(&lease_time, &opt[2], 4);
@@ -425,13 +549,6 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
                 }
                 
                 case DHCP_NAK:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     printk(KERN_INFO "kdai: DHCPNAK of %pI4\n", &payload->yiaddr);
                     entry = find_dhcp_snooping_entry(payload->yiaddr, vlan_id);
                     if (entry) {
@@ -441,26 +558,12 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
                 }
 
                 case DHCP_RELEASE:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     printk(KERN_INFO "kdai: DHCPRELEASE of %pI4\n", &payload->ciaddr);
                     delete_dhcp_snooping_entry(payload->ciaddr, vlan_id);
                     break;
                 }
 
                 case DHCP_DECLINE:{
-                    u16 vlan_id = 0;
-                    if (skb_vlan_tag_present(skb)) {
-                        vlan_id = skb_vlan_tag_get_id(skb);
-                        printk(KERN_INFO "kdai: VLAN ID for DHCPACK was: %d\n", vlan_id);
-                    } else {
-                        printk(KERN_INFO "kdai: DHCPACK had NO VLAN, defaulting VLAN ID to 0\n");
-                    }
                     printk(KERN_INFO "kdai: DHCPDECLINE of %pI4\n", &payload->ciaddr);
                     delete_dhcp_snooping_entry(payload->ciaddr, vlan_id);
                     break;

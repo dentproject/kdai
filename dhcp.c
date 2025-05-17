@@ -11,6 +11,12 @@ void insert_dhcp_snooping_entry(u8 *mac, u32 ip, u32 lease_time, u32 expire_time
     struct dhcp_snooping_entry* entry;
     unsigned long flags;
 
+    // Check if VLAN ID is within valid range (1-4094)
+    if (vlan_id < 1 || vlan_id >= 4095) {
+        printk(KERN_INFO "Invalid VLAN ID: %u. Must be between 1 (Default All) and 4094.\n", vlan_id);
+        return;
+    }
+
     entry = kmalloc(sizeof(struct dhcp_snooping_entry), GFP_KERNEL);
     if (!entry) {
         printk(KERN_INFO "kdai: kmalloc failed\n");

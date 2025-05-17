@@ -58,8 +58,9 @@ make -C ..
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. load_with_params
-sudo modprobe kdai vlans_to_inspect="0,10" globally_enabled_DAI=1
+make -C .. install
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+echo 1 | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI
 
 echo
 echo "=== Testing DAI Inspects all packets ==="

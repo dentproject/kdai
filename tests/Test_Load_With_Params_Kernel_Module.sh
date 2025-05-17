@@ -23,10 +23,10 @@ make -C ..
 echo
 echo "=== Running make load_with_param to prepare the module ==="
 echo
-make -C .. load_with_params
+make -C .. install
 
-echo "=== Running modprobe to load the module ==="
-sudo modprobe kdai vlans_to_inspect="0,10"
+echo "=== Load the kernel module  and Change the parameters==="
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
 echo "Test Passed!"

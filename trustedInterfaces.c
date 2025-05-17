@@ -33,16 +33,32 @@ void populate_trusted_interface_list(void) {
  * a message is printed to indicate the enw addition.asm
  * 
  * Return: This fucntion returns 1 if the interface name was added, 0 if it already exists,
- * and -1 if mmory allocaiton failed
+ * and -1 if mmory allocaiton failed, -2 if interface was not found, -3 if vlan id was invalid
  */
 int insert_trusted_interface(const char *device_name, u16 vlan_id) {
-
+    struct net_device *dev;
     struct interface_entry *new_entry;
     unsigned long flags;
 
     //If we found that device already return
     if(find_trusted_interface(device_name, vlan_id)){
         return 0;
+    }
+
+    // Check if the interface exists
+    dev = dev_get_by_name(&init_net, device_name);
+    if (!dev) {
+        printk(KERN_INFO "Interface not found: %s\n", device_name);
+        return -2;
+    }
+
+    // Release Interface after use
+    dev_put(dev);
+
+    // Check if VLAN ID is within valid range (1-4094)
+    if (vlan_id < 1 || vlan_id >= 4095) {
+        printk(KERN_INFO "Invalid VLAN ID: %u. Must be between 1 (Default All) and 4094.\n", vlan_id);
+        return -3;
     }
 
     // Allocate memory for the new entry
@@ -164,7 +180,7 @@ void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
     char *to_free;
     u16 vlan_id;
 
-    if(interfaces_and_vlan==NULL){
+    if(interfaces_and_vlan==NULL || *interfaces_and_vlan=='\0'){
         return;
     }
 

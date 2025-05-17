@@ -26,9 +26,16 @@ void init_vlan_hash_table(void) {
 
 // Add VLAN to be inspected
 void add_vlan_to_inspect(u16 vlan_id) {
-    unsigned int hash = vlan_hash(vlan_id);
+    unsigned int hash;
     struct vlan_hash_entry *entry;
     unsigned long flags;
+    
+    // Check if VLAN ID is within valid range (1-4094)
+    if (vlan_id < 1 || vlan_id >= 4095) {
+        printk(KERN_INFO "Invalid VLAN ID: %u. Must be between 1 (Default All) and 4094.\n", vlan_id);
+        return;
+    }
+    hash = vlan_hash(vlan_id);
     spin_lock_irqsave(&vlan_lock, flags);
 
     // Check if the VLAN already exists
@@ -143,7 +150,7 @@ void parse_vlans(char * vlans) {
     char * str;
     char *to_free;
 
-    if(vlans==NULL){
+    if(vlans==NULL || *vlans =='\0'){
         return;
     }
 
@@ -159,6 +166,7 @@ void parse_vlans(char * vlans) {
 
         //Conver the token into an unsigned 16 bit integer
         if(kstrtou16(token, 10, &vlan_id) == 0){
+
             //After converting add the vlan to the inpsection list
             add_vlan_to_inspect(vlan_id); 
         } else {
