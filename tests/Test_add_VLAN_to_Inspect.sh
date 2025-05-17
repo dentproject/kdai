@@ -58,8 +58,8 @@ make -C ..
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. load_with_params
-sudo modprobe kdai vlans_to_inspect="10"
+make -C .. install
+echo "10" > /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
 echo "=== Testing DAI compares VLAN_IDs to added entries ==="
@@ -70,7 +70,7 @@ sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_A
 sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 
 ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id 10 WAS FOUND in the hash table. INSPECTING")
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id 0 was NOT in the HASH TABLE")
+ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id 1 was NOT in the HASH TABLE")
 
 echo
 echo "Test Passed!"          

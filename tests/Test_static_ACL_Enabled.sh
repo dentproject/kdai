@@ -58,8 +58,9 @@ make -C ..
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. load_with_params
-sudo modprobe kdai vlans_to_inspect="0,10" static_ACL_Enabled=1
+make -C .. install
+echo "1,10" > /sys/module/kdai/parameters/vlans_to_inspect
+echo 1 > /sys/module/kdai/parameters/static_ACL_Enabled
 
 echo
 echo "=== Testing DAI rejcets all non Static Configurations ==="

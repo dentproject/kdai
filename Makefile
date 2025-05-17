@@ -17,12 +17,6 @@ install:
 	sudo depmod
 	sudo modprobe kdai
 	@echo "Module installed successfully."
-load_with_params:
-	@echo "Installing the module for loading with parameters..."
-	sudo cp kdai.ko ${MDIR}/.
-	sudo depmod
-	@echo "Module is Ready to Load."
-	@echo "Use 'sudo modprobe kdai [globally_enabled_DAI=<0|1> static_ACL_Enabled=<0|1>...]' to load the module."
 remove:
 	@echo "Removing the module..."
 	sudo modprobe -r kdai
