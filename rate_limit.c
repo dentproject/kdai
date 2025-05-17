@@ -44,7 +44,7 @@ static struct rate_limit_entry* get_rate_limit_entry(const char *iface_name, u16
  * interface if one does not already exist. It adds the new entry to the
  * global rate_limit_list under a spinlock to ensure thread safety.
  *
- * Return: Pointer to the new entry on success, or NULL if it already exists or allocation fails.
+ * Return: Pointer to the new entry on success, or NULL if it already exists, allocation fails, or VLAN was invalid.
  */
 static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name, u16 vlan_id) {
     struct rate_limit_entry *entry;
@@ -53,6 +53,12 @@ static struct rate_limit_entry* create_rate_limit_entry(const char *iface_name, 
     //If the entry already exists return null
     entry = get_rate_limit_entry(iface_name, vlan_id);
     if(entry != NULL){
+        return NULL;
+    }
+
+    // Check if VLAN ID is within valid range (1-4094)
+    if (vlan_id < 1 || vlan_id >= 4095) {
+        printk(KERN_INFO "Invalid VLAN ID: %u. Must be between 1 (Default All) and 4094.\n", vlan_id);
         return NULL;
     }
 
