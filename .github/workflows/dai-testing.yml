@@ -18,81 +18,83 @@ jobs:
        # Set all script permissions
       - name: Make test script executable
         run: |
-            chmod +x ./tests/*.sh
             chmod +x ./tests/testenv/*.sh
+            chmod +x ./tests/InitializationOfTheModule/*.sh
+            chmod +x ./tests/SettingDynamicParameters/*.sh
+            chmod +x ./tests/UsingDynamicParameters/*.sh
+            chmod +x ./tests/CoreDAIFeatures/*.sh
+            chmod +x ./tests/EdgeCases/*.sh
 
-
-      # Run Test_Build_Kernel_Module
+      # Run Initialization_Of_The_Module Tests
       - name: Run Test_Build_Kernel_Module
-        working-directory: ./tests
+        working-directory: ./tests/InitializationOfTheModule/
         run: ./Test_Build_Kernel_Module.sh
 
-      # Run Test_Insert_Kernel_Module
       - name: Run Test_Insert_Kernel_Module
-        working-directory: ./tests
+        working-directory: ./tests/InitializationOfTheModule/
         run: ./Test_Insert_Kernel_Module.sh
 
-      # Run Test_Communication_from_Unacknowledged_Sources
-      - name: Run Test_Communication_from_Unacknowledged_Sources
-        working-directory: ./tests
-        run: ./Test_Communication_from_Unacknowledged_Sources.sh
-
-      # Run Test_Communication_from_Acknowledged_Sources
-      - name: Run Test_Communication_from_Acknowledged_Sources
-        working-directory: ./tests
-        run: ./Test_Communication_from_Acknowledged_Sources.sh
-
-      # Run Test_ARP_Poisoning
-      - name: Run Test_ARP_Poisoning
-        working-directory: ./tests
-        run: ./Test_ARP_Poisoning.sh
-
-      # Run Test_Malformed_ARP_Request
-      - name: Run Test_Malformed_ARP_Request
-        working-directory: ./tests
-        run: ./Test_Malformed_ARP_Request.sh
-
-      # Run Test_Static_Entry_In_The_ARP_Table
-      - name: Run Test_Static_Entry_In_The_ARP_Table
-        working-directory: ./tests
-        run: ./Test_Static_Entry_In_The_ARP_Table.sh
-
-      # Run Test_Above_Rate_Limit
-      - name: Run Test_Above_Rate_Limit
-        working-directory: ./tests
-        run: ./Test_Above_Rate_Limit.sh
+      # Run Setting_Dynamic_Parameters Tests
+      - name: Run Test_add_Trusted_Interfaces
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_add_Trusted_Interfaces.sh
       
-      # Run Test_Below_Rate_Limit
-      - name: Run Test_Below_Rate_Limit
-        working-directory: ./tests
-        run: ./Test_Below_Rate_Limit.sh
+      - name: Run Test_add_VLANs
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_add_VLANs.sh
 
-      # Run Test_add_VLAN_to_Inspect
-      - name: Run Test_add_VLAN_to_Inspect
-        working-directory: ./tests
-        run: ./Test_add_VLAN_to_Inspect.sh
+      - name: Run Test_set_globally_enabled_DAI
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_set_globally_enabled_DAI.sh
 
-      # Run Test_globally_enabled_DAI
+      - name: Run Test_set_static_ACL_Enabled
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_set_static_ACL_Enabled.sh
+
+
+      # Run Using_Dynamic_Parameters Tests
+      - name: Run Test_DAI_VLAN_Filtering
+        working-directory: ./tests/UsingDynamicParameters/
+        run: ./Test_DAI_VLAN_Filtering.sh
+
       - name: Run Test_globally_enabled_DAI
-        working-directory: ./tests
+        working-directory: ./tests/UsingDynamicParameters/
         run: ./Test_globally_enabled_DAI.sh
 
-      # Run Test_Load_With_Params_Kernel_Module
-      - name: Run Test_Load_With_Params_Kernel_Module
-        working-directory: ./tests
-        run: ./Test_Load_With_Params_Kernel_Module.sh   
-
-      # Run Test_static_ACL_Enabled
       - name: Run Test_static_ACL_Enabled
-        working-directory: ./tests
-        run: ./Test_static_ACL_Enabled.sh   
+        working-directory: ./tests/UsingDynamicParameters/
+        run: ./Test_static_ACL_Enabled.sh
+      
+      # Run Core_DAI_Features Tests
 
-      # Run Test_Trusted_Interfaces
+      - name: Run Test_ARP_Poisoning
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_ARP_Poisoning.sh
+
+      - name: Run Test_Communication_after_DHCP_Snooping
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_Communication_after_DHCP_Snooping.sh
+
+      - name: Run Test_Communication_from_Unacknowledged_Sources
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_Communication_from_Unacknowledged_Sources.sh
+
+      - name: Run Test_Static_Entry_In_The_ARP_Table
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_Static_Entry_In_The_ARP_Table.sh
+
       - name: Run Test_Trusted_Interfaces
-        working-directory: ./tests
-        run: ./Test_Trusted_Interfaces.sh   
-              
-      # Run Test_Untrusted_Interfaces
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_Trusted_Interfaces.sh
+
       - name: Run Test_Untrusted_Interfaces
-        working-directory: ./tests
-        run: ./Test_Untrusted_Interfaces.sh   
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_Untrusted_Interfaces.sh
+
+      - name: Run Test_Above_Rate_Limit
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_Above_Rate_Limit.sh
+
+      - name: Run Test_Below_Rate_Limit
+        working-directory: ./tests/CoreDAIFeatures/
+        run: ./Test_Below_Rate_Limit.sh
