@@ -19,7 +19,7 @@ cleanup() {
     echo
     echo "=== Cleaning Up ==="
     echo
-    make -C .. remove || true
+    make -C ../.. remove || true
 
     sudo ip netns exec ns1 ip link set lo down || true
     sudo ip netns exec ns2 ip link set lo down || true
@@ -71,8 +71,5 @@ echo
 echo "Test Passed!"          
 sudo dmesg -n 7
 echo
-
-echo "Cleaning Up"
-make -C ../.. remove
 
 exit 

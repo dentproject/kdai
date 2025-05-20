@@ -70,7 +70,4 @@ echo "Test Passed!"
 sudo dmesg -n 7
 echo
 
-echo "Cleaning Up"
-make -C ../.. remove
-
 exit 
