@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Test_Trusted_Interfaces.sh
 # This script checks if the kernel module Accepts packets that cam in on trusted interfaces
 
 set -euo pipefail  #treat unset vars as errors
@@ -69,8 +68,8 @@ echo
 #Requests will default to VLAN 1, and will match with veth0 and veth3
 sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 
-sudo dmesg | tail -n 20 | grep "ACCEPTING"
-sudo dmesg | tail -n 20 | grep "The Interface was Trusted"
+sudo dmesg grep "ACCEPTING"
+sudo dmesg grep "The Interface was Trusted"
 
 echo
 echo "Test Passed!"          

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Test_Untrusted_Interfaces.sh
 # This script checks if the kernel module performs DAI on untrusted interfaces
 
 set -euo pipefail  #treat unset vars as errors
@@ -65,7 +64,6 @@ echo
 echo "=== Testing DAI Accepts Packets From Untrusted Interfaces ==="
 echo
 #Send and ARP Request and wait for a Response
-#Requests will default to VLAN 1, and will match with veth0 and veth3
 sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg | grep "Interface is UNTRUSTED"
 sudo dmesg | grep "It is not possible to Validate Source."
