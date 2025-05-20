@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Test_Above_Rate_Limit.sh
 # This script checks if the kernel module drops packets after the defualt 15 packets per second rate limit was exceeded
 
 set -euo pipefail  #treat unset vars as errors
@@ -18,7 +17,7 @@ cleanup() {
     echo
     echo "=== Cleaning Up ==="
     echo
-    make -C .. remove || true
+    make -C ../.. remove || true
 
     sudo ip netns exec ns1 ip link set lo down || true
     sudo ip netns exec ns2 ip link set lo down || true
@@ -41,33 +40,33 @@ cleanup
 sudo dmesg -C
 sudo dmesg -n 3
 
-sudo ./testenv/setup_test_env.sh
+sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
 echo "=== Running make to build the module ==="
 echo
-make -C ..
+make -C ../..
 
 echo
 echo "=== Running make load_with_params to insert the module ==="
 
 echo
-make -C .. install
+make -C ../.. install
 echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
 echo "=== Testing DAI Drops Packets When Rate Limit is Reached ==="
 echo
 #Send arp packets above the rate limit
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/send_ARP_Packets_Above_Limit.py
-ARP_DROP_STATUS=$(sudo dmesg | grep "DROPPING")
-ARP_EXIT_STATUS=$(sudo dmesg | grep "Packet hit the rate limit.")
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/send_ARP_Packets_Above_Limit.py
+sudo dmesg | grep "DROPPING"
+sudo dmesg | grep "Packet hit the rate limit."
 
 
 echo

@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# Test_Communication_from_Unacknowledged_Sources.sh.sh
-# This script checks if the kernel module Accepts packets that were NOT added to the DHCP snooping table
+# This script checks if the kernel module Accepts packets with a static arp entry in the ARP Table
 
-set -euo pipefail  # Safer bash: treat unset vars as errors
+set -euo pipefail  #treat unset vars as errors
 
 # Track current command for debugging
 last_command=""
@@ -18,7 +17,7 @@ cleanup() {
     echo
     echo "=== Cleaning Up ==="
     echo
-    make -C .. remove || true
+    make -C ../.. remove || true
 
     sudo ip netns exec ns1 ip link set lo down || true
     sudo ip netns exec ns2 ip link set lo down || true
@@ -41,33 +40,41 @@ sudo dmesg -C
 sudo dmesg -n 3
 cleanup
 
-sudo ./testenv/setup_test_env.sh
+sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
 echo "=== Running make to build the module ==="
 echo
-make -C ..
+make -C ../..
 
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. install
+make -C ../.. install
 echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
-echo "=== Testing DAI Filtering From Unacknowledged Sources ==="
+echo "=== Testing Static Arp Entry In ARP Table ==="
 echo
-#Send arp request without first being added to the DHCP or Static ARP table
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
+sudo ip netns exec ns1 ip link set veth0 down
+sudo ip netns exec ns1 sudo ifconfig veth0 hw ether e2:c8:14:a6:4f:ed
+sudo ip netns exec ns1 ip link set veth0 up
+sudo ip netns exec ns2 ip link set veth3 down
+sudo ip netns exec ns2 sudo ifconfig veth3 hw ether  3a:18:70:ca:91:b2
+sudo ip netns exec ns2 ip link set veth3 up
+sudo arp -s 192.168.1.1 e2:c8:14:a6:4f:ed -i veth1
+sudo arp -s 192.168.1.2 3a:18:70:ca:91:b2 -i veth2
+#Test communicaiton after static entries were added
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
 
-ARP_DROP_STATUS=$(sudo dmesg | tail -n 20 | grep "DROPPING")
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 20 | grep "It is not possible to Validate Source.")
+sudo dmesg | grep "ACCEPTING"
+sudo dmesg | grep "A Known Mac Adress with the same Source IP was the same as the received Mac Address"
 
 
 echo
