@@ -68,8 +68,8 @@ echo
 #Requests will default to VLAN 1, and will match with veth0 and veth3
 sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 
-sudo dmesg grep "ACCEPTING"
-sudo dmesg grep "The Interface was Trusted"
+sudo dmesg | grep "ACCEPTING"
+sudo dmesg | grep "The Interface was Trusted"
 
 echo
 echo "Test Passed!"          
