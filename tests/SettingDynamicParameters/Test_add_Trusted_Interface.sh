@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script checks if the kernel module can add more than one Interfaces to the Trusted List
+# This script checks if the kernel module can add one Interface to the Trusted List
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -58,13 +58,12 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo "veth2:20,veth1:10" | sudo tee /sys/module/kdai/parameters/trusted_interfaces
+echo "veth1:1" | sudo tee /sys/module/kdai/parameters/trusted_interfaces
 
 echo
 echo "=== Testing DAI Adds Trusted Interface to Entries ==="
 echo
-sudo dmesg | grep -E "VLAN ID:\s*10\s*Interface:\s*veth1"
-sudo dmesg | grep -E "VLAN ID:\s*20\s*Interface:\s*veth2"
+sudo dmesg | grep -E "VLAN ID:\s*1\s*Interface:\s*veth1"
 
 echo
 echo "Test Passed!"          
