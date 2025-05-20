@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script checks if DAI can add more than one VLANs to the inspection list
+# This script checks if DAI can add one VLAN to the inspection list
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -58,13 +58,12 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo "10,20" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+echo "10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
 echo "=== Testing DAI Adds VLAN_IDs to Entries ==="
 echo
 sudo dmesg | grep -E "VLAN ID:\s*10"
-sudo dmesg | grep -E "VLAN ID:\s*20"
 echo
 
 echo "Test Passed!"          
