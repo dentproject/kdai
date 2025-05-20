@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Test_add_VLAN_to_Inspect.sh
-# This script checks if DAI compares incoming packets to VLAN_IDs added to the inspeciton list
+# This script checks if DAI can set the globally_enabled_DAI boolean.
+# When enabled the kernel module inspects all packets as if they are part of the same VLAN
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -18,7 +18,7 @@ cleanup() {
     echo
     echo "=== Cleaning Up ==="
     echo
-    make -C .. remove || true
+    make -C ../.. remove || true
 
     sudo ip netns exec ns1 ip link set lo down || true
     sudo ip netns exec ns2 ip link set lo down || true
@@ -42,37 +42,33 @@ cleanup
 sudo dmesg -C
 sudo dmesg -n 3
 
-sudo ./testenv/setup_test_env.sh
+sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
 echo "=== Running make to build the module ==="
 echo
-make -C ..
+make -C ../..
 
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. install
-echo "10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+make -C ../.. install
+echo 1 | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI
 
 echo
-echo "=== Testing DAI compares VLAN_IDs to added entries ==="
+echo "=== Testing DAI rejcets all non Static Configurations ==="
 echo
-#Send ARP Request with a VLAN that is configured for inspection
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
-#Send ARP Request with a VLAN that is NOT configured for inspection (Default VLAN_ID)
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
-
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id 10 WAS FOUND in the hash table. INSPECTING")
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "vlan_id 1 was NOT in the HASH TABLE")
-
+sudo dmesg | grep "globally_enabled_DAI updated from 0 to 1"
 echo
+
 echo "Test Passed!"          
 sudo dmesg -n 7
+echo
+
 exit 

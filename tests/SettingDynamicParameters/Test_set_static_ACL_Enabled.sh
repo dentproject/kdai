@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Test_Communication_from_Acknowledged_Sources.sh
-# This script checks if the kernel module Accepts packets that were added to the DHCP snooping table
+# This script checks if DAI can set the static_ACL_Enabled boolean.
+# When enabled the DHCP Snooping table is no longer considered and Packets are accepted or dropped based
+# on the static arp table
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -18,7 +19,7 @@ cleanup() {
     echo
     echo "=== Cleaning Up ==="
     echo
-    make -C .. remove || true
+    make -C ../.. remove || true
 
     sudo ip netns exec ns1 ip link set lo down || true
     sudo ip netns exec ns2 ip link set lo down || true
@@ -42,38 +43,33 @@ cleanup
 sudo dmesg -C
 sudo dmesg -n 3
 
-sudo ./testenv/setup_test_env.sh
+sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
 echo "=== Running make to build the module ==="
 echo
-make -C ..
+make -C ../..
 
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. install
-echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+make -C ../.. install
+echo 1 | sudo tee /sys/module/kdai/parameters/static_ACL_Enabled
 
 echo
-echo "=== Testing DAI Accepts Packets From DHCP Acknowledged Sources ==="
+echo "=== Testing DAI rejcets all non Static Configurations ==="
 echo
-# Create and send the switch a Cusotm DHCP packet ACK for both 192.168.1.1 and 192.168.1.2 with VLAN_ID 10
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/DHCP_with_VLAN_10.py
-#Send and ARP Request and wait for a Response
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
-
-ARP_DROP_STATUS=$(sudo dmesg | tail -n 20 | grep "ACCEPTING")
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 20 | grep "The DHCP Snooping table matched.")
-
-
+sudo dmesg | grep "static_ACL_Enabled updated from 0 to 1"
 echo
+
 echo "Test Passed!"          
 sudo dmesg -n 7
+echo
+
 exit 

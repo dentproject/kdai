@@ -24,7 +24,7 @@ static int set_globally_enabled_DAI(const char *val, const struct kernel_param *
     }
 
     // Log the old value before updating and the new value after
-    printk(KERN_INFO "kdai: globally_enabled_DAI was updated from %d to %d\n\n", globally_enabled_DAI, tmp);
+    printk(KERN_INFO "kdai: globally_enabled_DAI updated from %d to %d\n\n", globally_enabled_DAI, tmp);
     
     globally_enabled_DAI = tmp;
 
@@ -51,7 +51,7 @@ static int set_static_acl(const char *val, const struct kernel_param *kp)
     }
 
     // Log a message to the kernel log to confirm the update
-    printk(KERN_INFO "kdai: static_ACL_Enabled updated to: %d to %d\n\n", static_ACL_Enabled, tmp);
+    printk(KERN_INFO "kdai: static_ACL_Enabled updated from %d to %d\n\n", static_ACL_Enabled, tmp);
 
     static_ACL_Enabled = tmp;
     return 0;
@@ -597,8 +597,8 @@ static int __init kdai_init(void) {
     parse_interfaces_and_vlan(trusted_interfaces);
 
     printk(KERN_INFO "kdai: Module loaded with parameters:\n");
-    printk(KERN_INFO "kdai: globally_enabled_DAI=%d, static_ACL_Enabled=%d\n\n", 
-        globally_enabled_DAI, static_ACL_Enabled);
+    printk(KERN_INFO "kdai: globally_enabled_DAI=%d\n", globally_enabled_DAI);
+    printk(KERN_INFO "kdai: static_ACL_Enabled=%d\n\n", static_ACL_Enabled);
     print_trusted_interface_list();
     print_all_vlans_in_hash();
    

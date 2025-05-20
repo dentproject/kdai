@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# Test_Communication_from_Unacknowledged_Sources.sh.sh
-# This script checks if the kernel module Accepts packets that were NOT added to the DHCP snooping table
+# This script checks if the kernel module compares packets from the DHCP snooping table to recieved packets
 
-set -euo pipefail  # Safer bash: treat unset vars as errors
+set -euo pipefail  #treat unset vars as errors
 
 # Track current command for debugging
 last_command=""
@@ -18,7 +17,7 @@ cleanup() {
     echo
     echo "=== Cleaning Up ==="
     echo
-    make -C .. remove || true
+    make -C ../.. remove || true
 
     sudo ip netns exec ns1 ip link set lo down || true
     sudo ip netns exec ns2 ip link set lo down || true
@@ -37,40 +36,45 @@ cleanup() {
 
 # Always run cleanup on exit (normal or error)
 trap cleanup EXIT
+
+cleanup
 sudo dmesg -C
 sudo dmesg -n 3
-cleanup
 
-sudo ./testenv/setup_test_env.sh
+sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
 echo "=== Running make to build the module ==="
 echo
-make -C ..
+make -C ../..
 
 echo
 echo "=== Running make load_with_params to insert the module ==="
+
 echo
-make -C .. install
+make -C ../.. install
 echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
-echo "=== Testing DAI Filtering From Unacknowledged Sources ==="
+echo "=== Testing DAI Drops Spoofed Packets ==="
 echo
-#Send arp request without first being added to the DHCP or Static ARP table
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
-
-ARP_DROP_STATUS=$(sudo dmesg | tail -n 20 | grep "DROPPING")
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 20 | grep "It is not possible to Validate Source.")
+#Update the DHCP table with 192.168.1.1 and 192.168.1.2
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/DHCP_without_VLAN.py
+#Tell 192.168.1.11 you are somebody else already on the network (Perform Arp poisoning attack)
+sudo ip netns exec ns1 sudo arpspoof -i veth0 -t 192.168.1.11 192.168.1.2 &
+sleep 3
+sudo pkill -f arpspoof
+sudo dmesg | grep "DROPPING"
+sudo dmesg | grep "ARP spoofing detected"
 
 
 echo
 echo "Test Passed!"          
 sudo dmesg -n 7
-exit 0
+exit 

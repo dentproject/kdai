@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Test_Build_Kernel_Module.sh
 # This script checks if the kernel module is buildable
 
 set -e #Exit immediately if a command exits with a non-zero status
@@ -18,7 +17,7 @@ sudo apt-get install -y build-essential
 echo
 echo "=== Running make to build the module ==="
 echo
-make -C ..
+make -C ../..
 
 echo
 echo "Test Passed!"

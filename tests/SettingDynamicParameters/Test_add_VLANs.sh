@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Test_Untrusted_Interfaces.sh
-# This script checks if the kernel module performs DAI on untrusted interfaces
+# This script checks if DAI can add VLANs to the inspection list
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -18,7 +17,7 @@ cleanup() {
     echo
     echo "=== Cleaning Up ==="
     echo
-    make -C .. remove || true
+    make -C ../.. remove || true
 
     sudo ip netns exec ns1 ip link set lo down || true
     sudo ip netns exec ns2 ip link set lo down || true
@@ -42,35 +41,33 @@ cleanup
 sudo dmesg -C
 sudo dmesg -n 3
 
-sudo ./testenv/setup_test_env.sh
+sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
 echo "=== Running make to build the module ==="
 echo
-make -C ..
+make -C ../..
 
 echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
-make -C .. install
-echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+make -C ../.. install
+echo "10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
 
 echo
-echo "=== Testing DAI Accepts Packets From Untrusted Interfaces ==="
+echo "=== Testing DAI Adds VLAN_IDs to Entries ==="
 echo
-#Send and ARP Request and wait for a Response
-#Requests will default to VLAN 1, and will match with veth0 and veth3
-sudo ip netns exec ns1 python3 ./helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
-
-ARP_EXIT_STATUS=$(sudo dmesg | tail -n 100 | grep "Interface is UNTRUSTED")
-
+sudo dmesg | grep -E "VLAN ID:\s*10"
 echo
+
 echo "Test Passed!"          
 sudo dmesg -n 7
+echo
+
 exit 
