@@ -75,7 +75,7 @@ static int set_vlans_to_inspect(const char *val, const struct kernel_param *kp){
         printk(KERN_INFO "kdai: No VLANs to inspect (empty input).\n\n");
         return 0;
     }
-    if (*val == '\0') {
+    if (strcmp(val,"clear") == 0) {
         printk(KERN_INFO "kdai: Clearing VLANs To Inspect list\n\n");
         free_all_vlan_entries();
         print_all_vlans_in_hash();
@@ -84,15 +84,18 @@ static int set_vlans_to_inspect(const char *val, const struct kernel_param *kp){
 
     // Parse the incoming string of VLANs
     to_free = kstrdup(val, GFP_KERNEL);
-    if (!to_free)
+    if (!to_free) {
+        printk(KERN_INFO "kdai: Could not dup\n\n");
         return -ENOMEM; // Memory allocation failed
-
+    }
     str = to_free;
 
     //Remove all VLAN_ID entries from the list
+    printk(KERN_INFO "kdai: Clearing VLANs To Inspect list\n\n");
     free_all_vlan_entries();
 
-     //Add all entries that are specified in new val
+    //Add all entries that are specified in new val
+    printk(KERN_INFO "kdai: Parsing VLANs To Inspect\n\n");
     parse_vlans(to_free);
 
     //Free allocate dmmemory
@@ -109,19 +112,20 @@ static const struct kernel_param_ops vlans_to_inspect_ops = {
 module_param_cb(vlans_to_inspect, &vlans_to_inspect_ops, &vlans_to_inspect, 0644);
 
 
-char * trusted_interfaces = NULL; //Default is None
+char * trusted_interfaces; //Default is None
 //module_param(trusted_interfaces, charp, 0644);
 MODULE_PARM_DESC(trusted_interfaces, "Comma-separated list of Interfaces:VLAN_ID that are considered to be trusted");
 static int set_trusted_interfaces(const char *val, const struct kernel_param *kp){
     char *to_free; // Declare to_free for duplicating the string
     char *str;
     
+    printk(KERN_INFO "kdai: Changed Trusted Interface List\n");
     // If the input string is empty, just return
     if (val == NULL) {
         printk(KERN_INFO "kdai: Empty input for Trusted Interfaces.\n\n");
         return 0;
     }
-    if(*val == '\0') {
+    if(strcmp(val,"clear") == 0) {
         printk(KERN_INFO "kdai: Clearing Trusted list\n\n");
         free_trusted_interface_list();
         print_trusted_interface_list();
@@ -130,9 +134,10 @@ static int set_trusted_interfaces(const char *val, const struct kernel_param *kp
 
     // Parse the incoming string of VLANs
     to_free = kstrdup(val, GFP_KERNEL);
-    if (!to_free)
+    if (!to_free) {
+        printk(KERN_INFO "kdai: Could not dup\n\n");
         return -ENOMEM; // Memory allocation failed
-
+    }
     str = to_free;
 
     //Remove all trusted entries from the list

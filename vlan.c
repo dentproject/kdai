@@ -150,10 +150,6 @@ void parse_vlans(char * vlans) {
     char * str;
     char *to_free;
 
-    if(vlans==NULL || *vlans =='\0'){
-        return;
-    }
-
     //Duplicate the string to safely modify it
     to_free = kstrdup(vlans,GFP_KERNEL);
     str = to_free;
@@ -170,7 +166,7 @@ void parse_vlans(char * vlans) {
             //After converting add the vlan to the inpsection list
             add_vlan_to_inspect(vlan_id); 
         } else {
-            printk(KERN_INFO "Invalid VLAN_ID: %s\n", token);
+            printk(KERN_INFO "Invalid VLAN_ID: \"%s\"\n", token);
         }
     }
     //Free the allocated memory

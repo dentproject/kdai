@@ -35,10 +35,26 @@ jobs:
         run: ./Test_Insert_Kernel_Module.sh
 
       # Run Setting_Dynamic_Parameters Tests
+      - name: Run Test_add_Trusted_Interface
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_add_Trusted_Interface.sh
+
+      - name: Run Test_add_Trusted_Interfaces_Malformed
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_add_Trusted_Interfaces_Malformed.sh
+
       - name: Run Test_add_Trusted_Interfaces
         working-directory: ./tests/SettingDynamicParameters/
         run: ./Test_add_Trusted_Interfaces.sh
-      
+
+      - name: Run Test_add_VLAN
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_add_VLAN.sh
+
+      - name: Run Test_add_VLANs_Malformed
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_add_VLANs_Malformed.sh
+
       - name: Run Test_add_VLANs
         working-directory: ./tests/SettingDynamicParameters/
         run: ./Test_add_VLANs.sh
@@ -47,10 +63,17 @@ jobs:
         working-directory: ./tests/SettingDynamicParameters/
         run: ./Test_set_globally_enabled_DAI.sh
 
+      - name: Run Test_set_globally_enabled_DAI_Malformed
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_set_globally_enabled_DAI_Malformed.sh
+
       - name: Run Test_set_static_ACL_Enabled
         working-directory: ./tests/SettingDynamicParameters/
         run: ./Test_set_static_ACL_Enabled.sh
 
+      - name: Run Test_set_static_ACL_Enabled_Malformed
+        working-directory: ./tests/SettingDynamicParameters/
+        run: ./Test_set_static_ACL_Enabled_Malformed.sh
 
       # Run Using_Dynamic_Parameters Tests
       - name: Run Test_DAI_VLAN_Filtering
