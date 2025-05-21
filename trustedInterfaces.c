@@ -48,7 +48,7 @@ int insert_trusted_interface(const char *device_name, u16 vlan_id) {
     // Check if the interface exists
     dev = dev_get_by_name(&init_net, device_name);
     if (!dev) {
-        printk(KERN_INFO "Interface not found: %s\n", device_name);
+        printk(KERN_INFO "Interface not found: \"%s\"\n", device_name);
         return -2;
     }
 
@@ -126,13 +126,13 @@ void print_trusted_interface_list(void) {
     struct interface_entry *entry;
     unsigned long flags;
 
-    printk(KERN_INFO "kdai: ---- List of trusted network interfaces ---\n");
+    printk(KERN_INFO "kdai: ---- Trusted Network Interfaces List ---\n");
 
     //If the list is empty notify the user
     if(trusted_list_size == 0) {
         printk(KERN_INFO "kdai: The list is currently empty!\n");
         printk(KERN_INFO "kdai: All interfaces are Untrusted.\n");
-        printk(KERN_INFO "kdai: ---- End of Trusted Network Interfaces List ---\n\n");
+        printk(KERN_INFO "kdai: ---- Trusted Network Interfaces List ---\n\n");
         return;
     }
         
@@ -180,10 +180,6 @@ void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
     char *to_free;
     u16 vlan_id;
 
-    if(interfaces_and_vlan==NULL || *interfaces_and_vlan=='\0'){
-        return;
-    }
-
     //Duplicate the string to safely modify it
     to_free = kstrdup(interfaces_and_vlan,GFP_KERNEL);
     str = to_free;
@@ -197,7 +193,7 @@ void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
         //Find the deliminator and null terminate the interface from the vlan;
         vlan_id_str = strstr(token, ":");
         if (!vlan_id_str) {
-            printk(KERN_INFO "Invalid format (missing colon): %s\n", token);
+            printk(KERN_INFO "Invalid Format (Expected: eth0:1), Input Recieved: \"%s\"\n", interfaces_and_vlan);
             continue;
         }
         *vlan_id_str='\0';
@@ -209,7 +205,7 @@ void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
             //After converting add the interface and vlan to the trusted list
             insert_trusted_interface(token, vlan_id);
         } else {
-            printk(KERN_INFO "Invalid VLAN_ID: %s\n", token);
+            printk(KERN_INFO "Input Format Error for Trusted Interface (Expected: eth0:1)\n");
         }
     }
     //Free the allocated memory
