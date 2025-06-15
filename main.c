@@ -1,6 +1,6 @@
 
 #include "dhcp.h"
-#include "trustedInterfaces.h"
+#include "trusted_interfaces.h"
 #include "rate_limit.h"
 #include "vlan.h"
 #include "errno.h"
