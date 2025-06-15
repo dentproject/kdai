@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Test_static_ACL_Enabled.sh
-# This script checks if the kernel module Accepts packets that were added statically and rejects them if they were not. It does not check the DHCP snooping table
+# This script checks if the kernel module Accepts packets that were added statically and rejects them if they were not.
+# It does not check the DHCP snooping table
 
 set -euo pipefail  #treat unset vars as errors
 

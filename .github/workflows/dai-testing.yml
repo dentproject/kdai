@@ -21,7 +21,7 @@ jobs:
             chmod +x ./tests/testenv/*.sh
             chmod +x ./tests/module_init/*.sh
             chmod +x ./tests/set_params/*.sh
-            chmod +x ./tests/UsingDynamicParameters/*.sh
+            chmod +x ./tests/param_behavior/*.sh
             chmod +x ./tests/CoreDAIFeatures/*.sh
             chmod +x ./tests/EdgeCases/*.sh
 
@@ -75,18 +75,18 @@ jobs:
         working-directory: ./tests/set_params/
         run: ./test_set_static_acl_enabled.sh
 
-      # Run Using_Dynamic_Parameters Tests
-      - name: Run Test_DAI_VLAN_Filtering
-        working-directory: ./tests/UsingDynamicParameters/
-        run: ./Test_DAI_VLAN_Filtering.sh
+      # Run param_behavior Tests
+      - name: Run test_dai_vlan_filtering
+        working-directory: ./tests/param_behavior/
+        run: ./test_dai_vlan_filtering.sh
 
-      - name: Run Test_globally_enabled_DAI
-        working-directory: ./tests/UsingDynamicParameters/
-        run: ./Test_globally_enabled_DAI.sh
+      - name: Run test_globally_enabled_dai
+        working-directory: ./tests/param_behavior/
+        run: ./test_globally_enabled_dai.sh
 
-      - name: Run Test_static_ACL_Enabled
-        working-directory: ./tests/UsingDynamicParameters/
-        run: ./Test_static_ACL_Enabled.sh
+      - name: Run test_static_acl_enabled
+        working-directory: ./tests/param_behavior/
+        run: ./test_static_acl_enabled.sh
       
       # Run Core_DAI_Features Tests
       - name: Run Test_ARP_Poisoning

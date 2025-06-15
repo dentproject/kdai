@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Test_globally_enabled_DAI.sh
 # This script checks if the kernel module inspects all packets when globally_enabled_DAI is true
 
 set -euo pipefail  #treat unset vars as errors
