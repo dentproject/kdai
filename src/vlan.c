@@ -12,11 +12,21 @@ DEFINE_SPINLOCK(vlan_lock);
 static struct hlist_head vlan_hash_table[VLAN_HASH_SIZE];
 int currentNumberOfVLANs;
 
-// Hash function
+/**
+ * vlan_hash - Compute hash index for a VLAN ID
+ * @vlan_id: VLAN identifier
+ *
+ * Return: A hash bucket index for the given VLAN ID using hash_32().
+ */
 static inline unsigned int vlan_hash(u16 vlan_id) {
     return hash_32(vlan_id, VLAN_HASH_BITS);
 }
 
+/**
+ * init_vlan_hash_table - Initialize VLAN hash table
+ *
+ * Sets up each bucket in the vlan_hash_table as an empty hlist head.
+ */
 void init_vlan_hash_table(void) {
     int i;
     for (i = 0; i < VLAN_HASH_SIZE; i++) {
@@ -24,7 +34,18 @@ void init_vlan_hash_table(void) {
     }
 }
 
-// Add VLAN to be inspected
+/**
+ * add_vlan_to_inspect - Add a VLAN ID to the inspection hash table
+ * @vlan_id: VLAN identifier to add
+ *
+ * This function adds a VLAN ID to the vlan_hash_table for inspection.
+ * It first validates that the VLAN ID is within the valid range (1-4094).
+ * If the VLAN is already present in the hash table, it does nothing.
+ * Otherwise, it allocates memory for a new hash entry, initializes it, 
+ * and inserts it at the head of the appropriate hash bucket. 
+ * The insertion and lookup are protected by a spinlock.
+ *
+ */
 void add_vlan_to_inspect(u16 vlan_id) {
     unsigned int hash;
     struct vlan_hash_entry *entry;
@@ -61,7 +82,13 @@ void add_vlan_to_inspect(u16 vlan_id) {
     spin_unlock_irqrestore(&vlan_lock, flags);
 }
 
-// Check if VLAN should be inspected
+/**
+ * vlan_should_be_inspected - Check if a VLAN ID is in the inspection list.
+ * @vlan_id: The VLAN ID to check.
+ *
+ * Return: true if the VLAN ID is present in the hash table of VLANs to be inspected
+ *         false if the VLAN ID is NOT present in the hash table of VLANs to be inspected
+ */
 bool vlan_should_be_inspected(u16 vlan_id) {
     unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry;
@@ -77,7 +104,13 @@ bool vlan_should_be_inspected(u16 vlan_id) {
     return false;
 }
 
-// To remove a VLAN
+/**
+ * remove_vlan_from_inspect - Remove a VLAN ID from the inspection list.
+ * @vlan_id: The VLAN ID to remove.
+ *
+ * Searches the VLAN hash table for the given VLAN ID and removes it if found,
+ * freeing the associated memory and decrementing the count of VLANs.
+ */
 void remove_vlan_from_inspect(u16 vlan_id) {
     unsigned int hash = vlan_hash(vlan_id);
     struct vlan_hash_entry *entry;
@@ -95,10 +128,24 @@ void remove_vlan_from_inspect(u16 vlan_id) {
     spin_unlock_irqrestore(&vlan_lock, flags);
 }
 
+/**
+ * compare_u16 - Compare two u16 values for sorting.
+ * @a: Pointer to the first u16 value.
+ * @b: Pointer to the second u16 value.
+ *
+ * Return: Negative if *a < *b, zero if equal, positive if *a > *b.
+ */
 static int compare_u16(const void * a, const void * b){
     return *(u16 *)a - *(u16 *)b;
 }
 
+/**
+ * print_all_vlans_in_hash - Print all VLAN IDs currently in the VLAN hash table.
+ *
+ * This function collects all VLAN IDs from the VLAN hash table into a dynamically
+ * allocated array, sorts them in ascending order, and prints the list to the kernel log.
+ * The function acquires a spinlock to protect the hash table during collection.
+ */
 void print_all_vlans_in_hash(void) {
     int i;
     struct vlan_hash_entry *entry;
@@ -145,7 +192,17 @@ void print_all_vlans_in_hash(void) {
     // Free the dynamically allocated memory
     kfree(vlan_ids);
 }
-//Taken a string of comma seperated vlans and add those vlans to the inspection list
+
+/**
+ * parse_vlans - Parse a comma-separated list of VLAN IDs and add them to the inspection list.
+ * @vlans: A string containing comma-separated VLAN IDs (e.g., "100,200,300").
+ *
+ * This function duplicates the input string to safely modify it, then splits it by commas
+ * to extract individual VLAN ID tokens. Each token is converted to a 16-bit unsigned integer.
+ * If conversion succeeds, the VLAN ID is added to the inspection list via add_vlan_to_inspect().
+ * Invalid VLAN IDs are logged as informational messages.
+ *
+ */
 void parse_vlans(char * vlans) {
     char * token;
     char * str;
@@ -175,6 +232,16 @@ void parse_vlans(char * vlans) {
 
 }
 
+/**
+ * free_all_vlan_entries - Free all entries in the VLAN hash table.
+ *
+ * This function iterates over all buckets in the VLAN hash table,
+ * safely removes each VLAN entry from the hash lists, and frees
+ * the associated memory. It also resets the global count of VLANs
+ * to zero. The function acquires the vlan_lock spinlock to protect
+ * concurrent access during modification of the hash table.
+ *
+ */
 void free_all_vlan_entries(void) {
     //loop counter for hashtable buckets
     int i;
