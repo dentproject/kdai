@@ -95,9 +95,10 @@ void remove_vlan_from_inspect(u16 vlan_id) {
     spin_unlock_irqrestore(&vlan_lock, flags);
 }
 
-int compare_u16(const void * a, const void * b){
+static int compare_u16(const void * a, const void * b){
     return *(u16 *)a - *(u16 *)b;
 }
+
 void print_all_vlans_in_hash(void) {
     int i;
     struct vlan_hash_entry *entry;
