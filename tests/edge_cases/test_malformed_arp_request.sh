@@ -46,7 +46,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -63,7 +63,7 @@ echo
 echo "=== Testing DAI Malformed ARP Request ==="
 echo
 #Send a Malformed ARP request
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/Test_Malformed_ARP_with_VLAN.py
+sudo ip netns exec ns1 python3 ../python_helpers/test_malformed_arp_with_vlan.py
 
 
 sudo dmesg | grep "DROPPING"

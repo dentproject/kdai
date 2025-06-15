@@ -45,7 +45,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -71,7 +71,7 @@ sudo ip netns exec ns2 ip link set veth3 up
 sudo arp -s 192.168.1.1 e2:c8:14:a6:4f:ed -i veth1
 sudo arp -s 192.168.1.2 3a:18:70:ca:91:b2 -i veth2
 #Test communicaiton after static entries were added
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_with_vlan_id.py
 
 sudo dmesg | grep "ACCEPTING"
 sudo dmesg | grep "A Known Mac Adress with the same Source IP was the same as the received Mac Address"

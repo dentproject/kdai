@@ -47,7 +47,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -66,9 +66,9 @@ echo
 echo "=== Testing DAI rejcets all non Static Configurations ==="
 echo
 # Create and send the switch a Cusotm DHCP packet ACK for both 192.168.1.1 and 192.168.1.2 with VLAN_ID 10
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/DHCP_with_VLAN_10.py
+sudo ip netns exec ns1 python3 ../python_helpers/dhcp_with_vlan_10.py
 #Send and ARP Request and wait for a Response
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_with_vlan_id.py
 
 sudo dmesg | grep "DROPPING"
 sudo dmesg | grep "Implicit Drop was Added since static_ACL was Enabled"

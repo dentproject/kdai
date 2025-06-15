@@ -46,7 +46,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -64,9 +64,9 @@ echo
 echo "=== Testing DAI compares VLAN_IDs to added entries ==="
 echo
 #Send ARP Request with a VLAN that is configured for inspection
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_with_vlan_id.py
 #Send ARP Request with a VLAN that is NOT configured for inspection (Default VLAN_ID)
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 
 sudo dmesg | grep "vlan_id 10 WAS FOUND in the hash table. INSPECTING"
 sudo dmesg | grep "vlan_id 1 was NOT in the HASH TABLE"
