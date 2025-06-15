@@ -23,7 +23,7 @@ jobs:
             chmod +x ./tests/set_params/*.sh
             chmod +x ./tests/param_behavior/*.sh
             chmod +x ./tests/core_dai_features/*.sh
-            chmod +x ./tests/EdgeCases/*.sh
+            chmod +x ./tests/edge_cases/*.sh
 
       # Run module_init Tests
       - name: Run test_build_kernel_module
@@ -100,7 +100,7 @@ jobs:
       - name: Run test_below_rate_limit
         working-directory: ./tests/core_dai_features/
         run: ./test_below_rate_limit.sh
-        
+
       - name: Run test_communication_after_dhcp_snooping
         working-directory: ./tests/core_dai_features/
         run: ./test_communication_after_dhcp_snooping.sh
@@ -121,7 +121,7 @@ jobs:
         working-directory: ./tests/core_dai_features/
         run: ./test_untrusted_interfaces.sh
 
-        # Run Edge_Cases Tests
-      - name: Run Test_Malformed_ARP_Request
-        working-directory: ./tests/EdgeCases/
-        run: ./Test_Malformed_ARP_Request.sh
+        # Run edge_cases Tests
+      - name: Run test_malformed_arp_request
+        working-directory: ./tests/edge_cases/
+        run: ./test_malformed_arp_request.sh
