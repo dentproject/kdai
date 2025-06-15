@@ -121,3 +121,9 @@ jobs:
       - name: Run Test_Below_Rate_Limit
         working-directory: ./tests/CoreDAIFeatures/
         run: ./Test_Below_Rate_Limit.sh
+
+        # Run Edge_Cases Tests
+
+      - name: Run Test_Malformed_ARP_Request
+        working-directory: ./tests/EdgeCases/
+        run: ./Test_Malformed_ARP_Request.sh
