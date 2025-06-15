@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Test_Malformed_ARP_Request_and_Response.sh
 # This script checks if the kernel module drops malformed arp requests
 
 set -euo pipefail  #treat unset vars as errors
