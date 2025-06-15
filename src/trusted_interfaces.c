@@ -6,11 +6,10 @@ DEFINE_SPINLOCK(interface_lock);
 static int trusted_list_size = 0;
 
 /**
- * populate_trusted_interface_list - Populate the trusted interface list with all network interfaces.asm
- * 
- * This function iterates over all netowrk interfaces in the system and inserts each one into the
+ * populate_trusted_interface_list - Populate the trusted interface list with all network interfaces
+ *
+ * This function iterates over all network interfaces in the system and inserts each one into 
  * the trusted interface list.
- * 
  */
 void populate_trusted_interface_list(void) {
     struct net_device *dev;
@@ -32,8 +31,11 @@ void populate_trusted_interface_list(void) {
  * the end fo the lis tusing list_add_tail. The trusted_list_size if then incremented, and 
  * a message is printed to indicate the enw addition.asm
  * 
- * Return: This fucntion returns 1 if the interface name was added, 0 if it already exists,
- * and -1 if mmory allocaiton failed, -2 if interface was not found, -3 if vlan id was invalid
+ * Return: 1 if the interface name was added,
+ *         0 if it already exists,
+ *        -1 if memory allocation failed,
+ *        -2 if the interface was not found,
+ *        -3 if the VLAN ID was invalid.
  */
 int insert_trusted_interface(const char *device_name, u16 vlan_id) {
     struct net_device *dev;
@@ -89,13 +91,13 @@ int insert_trusted_interface(const char *device_name, u16 vlan_id) {
 
 /**
  * find_trusted_interface - Find an interface in the trusted list.
- * @interface_name: The name of the interaface to find
- * @vlan_id: The vlan associated for DAI
- * 
- * This function searches the trusted interface list for an entry that matches the given interface name.
- * If a matching entry is found, the function returns the name of th einterface. If no match is found the
- * function returns NULL.
- * 
+ * @interface_name: The name of the interface to find.
+ * @vlan_id: The VLAN ID associated with the interface.
+ *
+ * This function searches the trusted interface list for an entry that matches
+ * the given interface name and VLAN ID. If a matching entry is found, the function
+ * returns the name of the interface. If no match is found, it returns NULL.
+ *
  * Return: The name of the trusted interface if found, or NULL if not found.
  */
 const char* find_trusted_interface(const char *interface_name, u16 vlan_id) {
@@ -115,12 +117,12 @@ const char* find_trusted_interface(const char *interface_name, u16 vlan_id) {
 }
 
 /**
- * print_trusted_interface_list - Print all interfaces in the trusted list
- * 
- * This function prints the names of all network interfaces in the trusted interface list.
- * If the list is empty, it prints a message indicaitng that all interfaces are assumed to be Untrusted.
- * 
- * Return: This function does not return a value
+ * print_trusted_interface_list - Print all interfaces in the trusted list.
+ *
+ * This function logs the names and VLAN IDs of all network interfaces currently
+ * stored in the trusted interface list. If the list is empty, it prints a message
+ * indicating that no interfaces are trusted and all are treated as untrusted.
+ *
  */
 void print_trusted_interface_list(void) {
     struct interface_entry *entry;
@@ -148,15 +150,13 @@ void print_trusted_interface_list(void) {
 }
 
 /**
- * free_trusted_interface_list - Free all entries in the trusted interface list
- * 
+ * free_trusted_interface_list - Free all entries in the trusted interface list.
+ *
  * This function iterates through the trusted interface list and frees each entry.
- * It uses list_for_each_entry_safe to  traverse the list while deleting entries. 
- * This means it uses an additional temporary pointer to store the next entry before 
- * deleting the currnet one Each entry is removed from the list using list_del and 
- * then freed using kfree.
- * 
- * Return: this function does not return anything
+ * It uses list_for_each_entry_safe to safely traverse the list while deleting entries.
+ * This allows safe deletion by storing the next pointer before removing the current one.
+ * Each entry is removed using list_del and its memory is freed with kfree.
+ *
  */
 void free_trusted_interface_list(void) {
     struct interface_entry *entry, *tmp;
@@ -172,7 +172,16 @@ void free_trusted_interface_list(void) {
 }
 
 
-//Taken a string of comma seperated vlans and add those vlans to the inspection list
+/**
+ * parse_interfaces_and_vlan - parse a comma-separated list of interfaces with VLANs and add them to the trusted list
+ * @interfaces_and_vlan: string of comma-separated interface:vlan pairs, e.g. "eth0:1,eth1:2"
+ *
+ * Parses the string containing interface and VLAN pairs separated by commas.
+ * Each pair is separated by ':' into interface name and VLAN ID.
+ * Calls insert_trusted_interface() to add each valid pair to the trusted list.
+ * Invalid entries (missing colon or invalid VLAN) are ignored with an info message.
+ *
+*/
 void parse_interfaces_and_vlan(char * interfaces_and_vlan) {
     char * token;
     char * vlan_id_str;
