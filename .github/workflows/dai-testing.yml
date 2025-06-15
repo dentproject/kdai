@@ -19,20 +19,20 @@ jobs:
       - name: Make test script executable
         run: |
             chmod +x ./tests/testenv/*.sh
-            chmod +x ./tests/InitializationOfTheModule/*.sh
+            chmod +x ./tests/module_init/*.sh
             chmod +x ./tests/SettingDynamicParameters/*.sh
             chmod +x ./tests/UsingDynamicParameters/*.sh
             chmod +x ./tests/CoreDAIFeatures/*.sh
             chmod +x ./tests/EdgeCases/*.sh
 
-      # Run Initialization_Of_The_Module Tests
-      - name: Run Test_Build_Kernel_Module
-        working-directory: ./tests/InitializationOfTheModule/
-        run: ./Test_Build_Kernel_Module.sh
+      # Run initialization_of_the_module Tests
+      - name: Run test_build_kernel_module
+        working-directory: ./tests/module_init/
+        run: ./test_build_kernel_module.sh
 
-      - name: Run Test_Insert_Kernel_Module
-        working-directory: ./tests/InitializationOfTheModule/
-        run: ./Test_Insert_Kernel_Module.sh
+      - name: Run test_insert_kernel_module
+        working-directory: ./tests/module_init/
+        run: ./test_insert_kernel_module.sh
 
       # Run Setting_Dynamic_Parameters Tests
       - name: Run Test_add_Trusted_Interface
