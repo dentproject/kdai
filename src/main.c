@@ -10,7 +10,7 @@
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("M. Sami GURPINAR <sami.gurpinar@gmail.com>. Edited by Korel Ucpinar <korelucpinar@gmail.com>");
 MODULE_DESCRIPTION("kdai(Kernel Dynamic ARP Inspection) is a linux kernel module to defend against arp spoofing");
-MODULE_VERSION("0.1"); 
+MODULE_VERSION("1.0"); 
 
 //A Macro used to check if an Ethernet address (addr) is a broadcast address
 #define eth_is_bcast(addr) (((addr)[0] & 0xffff) && ((addr)[2] & 0xffff) && ((addr)[4] & 0xffff))
@@ -19,6 +19,24 @@ MODULE_VERSION("0.1");
 static struct nf_hook_ops* bridge_dhcp_hook = NULL;
 static struct nf_hook_ops* bridge_arp_hook = NULL;
 
+/**
+ * arp_is_valid - Validate ARP packet fields for consistency and correctness
+ * @skb: Pointer to the socket buffer containing the packet
+ * @ar_op: ARP operation code (e.g., ARP request or reply)
+ * @sha: Sender hardware (MAC) address from the ARP message body
+ * @sip: Sender IP address from the ARP message body
+ * @tha: Target hardware (MAC) address from the ARP message body
+ * @tip: Target IP address from the ARP message body
+ *
+ * This function performs sanity checks on the ARP packet fields to ensure
+ * the packet is well-formed and not malformed. It can validate:
+ * - That the sender MAC address in the ARP message matches the Ethernet header source MAC 
+ * - That sender and target IP addresses are not multicast, loopback, or zero network addresses
+ * - That for ARP replies, the target MAC address in the ARP message matches the Ethernet destination MAC
+ *
+ * Return: SUCCESS (0) if all validations pass,
+ *         or negative error codes indicating specific validation failures.
+ */
 static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha, 
     u32 sip, unsigned char* tha, u32 tip)  {
     int status = SUCCESS;
@@ -76,6 +94,28 @@ static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha,
     return status;
 }
 
+/**
+ * validate_arp_request - Validate incoming ARP requests for security
+ * @priv: Private data pointer 
+ * @skb: Pointer to the socket buffer containing the packet
+ * @state: Netfilter hook state info 
+ * @vlan_id: VLAN ID on which the packet was received
+ *
+ * This function processes ARP packets hooked at the bridge pre-routing stage.
+ * It validates the ARP message by checking:
+ *   - ARP header fields (using arp_is_valid)
+ *   - Whether the ARP source IP and MAC match known entries in the ARP table
+ *   - If static ACL mode is enabled, drops packets not matching static entries
+ *   - Otherwise, validates the ARP source against the DHCP snooping table
+ * 
+ * If validation fails at any stage, the packet is dropped.
+ * Packets matching all validation steps are accepted.
+ * Special debug bypass for interface "enp0s7".
+ *
+ * Return:
+ *   NF_ACCEPT to allow packet processing to continue
+ *   NF_DROP to drop the packet due to validation failure
+ */
 static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const struct nf_hook_state* state, u16 vlan_id) {
     
     //Refrence Structure to Standard ARP header used in the linux Kernel
@@ -191,6 +231,14 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
 
 }
 
+/**
+ * is_trusted - check if interface and VLAN combination is trusted
+ * @interface_name: interface name string
+ * @vlan_id: VLAN ID
+ *
+ * Returns true if the given interface and VLAN ID are in the trusted list,
+ * false otherwise.
+ */
 static bool is_trusted(const char *interface_name, u16 vlan_id) {
     // Check if the device is trusted using the find_trusted_interface function
     if (find_trusted_interface(interface_name, vlan_id)) {
@@ -202,6 +250,19 @@ static bool is_trusted(const char *interface_name, u16 vlan_id) {
     }
 }
 
+/**
+ * arp_hook_handler - netfilter hook for processing ARP packets
+ * @priv: private data pointer 
+ * @skb: socket buffer containing the packet
+ * @state: netfilter hook state information
+ *
+ * This function inspects incoming ARP packets on network interfaces,
+ * applying Dynamic ARP Inspection (DAI) rules depending on VLAN,
+ * global enablement, interface trust, and rate limits. This funciton relies on 
+ * validate_arp_request.
+ * 
+ * Returns NF_ACCEPT to accept the packet or NF_DROP to drop it. 
+ */
 static unsigned int arp_hook_handler(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
 
     struct net_device *dev;
@@ -304,6 +365,18 @@ static unsigned int arp_hook_handler(void* priv, struct sk_buff* skb, const stru
     }    
 }
 
+/**
+ * dhcp_hook_handler - netfilter hook for processing DHCP packets
+ * @priv: private data pointer 
+ * @skb: socket buffer containing the packet
+ * @state: netfilter hook state information
+ *
+ * Processes DHCP packets on the network, updating the DHCP snooping
+ * table for lease times, IP-MAC bindings, and handling DHCPACK, DHCPNAK,
+ * DHCPRELEASE, and DHCPDECLINE messages. Drops invalid DHCP packets.
+ *
+ * Returns NF_ACCEPT to accept the packet or NF_DROP to drop it.
+ */
 static unsigned int dhcp_hook_handler(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
     struct udphdr* udp;
     struct dhcp* payload;
@@ -443,7 +516,15 @@ static unsigned int dhcp_hook_handler(void* priv, struct sk_buff* skb, const str
     
 }
 
-
+/**
+ * kdai_init - Module initialization function
+ *
+ * Initializes data structures, parses configuration parameters,
+ * registers netfilter hooks for DHCP and ARP, and starts the DHCP
+ * cleanup kernel thread.
+ *
+ * Returns 0 on success or -ENOMEM on failure.
+ */
 static int __init kdai_init(void) {   
 
     init_vlan_hash_table();
@@ -500,7 +581,12 @@ err:
     return -ENOMEM;    
 }
 
-
+/**
+ * kdai_exit - Module cleanup function
+ *
+ * Unregisters netfilter hooks, stops DHCP cleanup thread,
+ * and frees all allocated resources.
+ */
 static void __exit kdai_exit(void) {
 
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
