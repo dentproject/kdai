@@ -21,6 +21,7 @@
 #include <linux/netfilter_bridge.h>
 #include <linux/if_vlan.h>  
 #include <linux/moduleparam.h>
+#include <linux/types.h>
 
 #endif
 

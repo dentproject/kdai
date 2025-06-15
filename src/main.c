@@ -4,169 +4,39 @@
 #include "rate_limit.h"
 #include "vlan.h"
 #include "errno.h"
+#include "module_params.h"
 #include "common.h"
-
-
-bool globally_enabled_DAI = false; //Default is false
-//module_param(globally_enabled_DAI, bool, 0644);
-MODULE_PARM_DESC(globally_enabled_DAI, "Enable or disable DAI Inspection for all Packets. All packets will be assumed to be in the same VLAN.");
-static int set_globally_enabled_DAI(const char *val, const struct kernel_param *kp)
-{
-    bool tmp;
-    // Convert the input string (e.g., "1" or "true") to a boolean (0 or 1)
-    int ret = kstrtobool(val, &tmp);
-    if (ret < 0) {
-        printk(KERN_INFO "kdai: globally_enabled_DAI was NOT updated, input was invalid\n\n");
-        return ret;
-    }
-
-    // Log the old value before updating and the new value after
-    printk(KERN_INFO "kdai: globally_enabled_DAI updated from %d to %d\n\n", globally_enabled_DAI, tmp);
-    
-    globally_enabled_DAI = tmp;
-
-    return 0;
-}
-static const struct kernel_param_ops globally_enabled_DAI_ops = {
-    .set = set_globally_enabled_DAI, //This funciton will be called whenever the static_ACL_Enabled variable is written too
-    .get = param_get_bool, //This function will be called whenever the static_ACL_Enabled variable is read
-};
-module_param_cb(globally_enabled_DAI, &globally_enabled_DAI_ops, &globally_enabled_DAI, 0644);
-
-
-bool static_ACL_Enabled = false; //Default is false
-//module_param(static_ACL_Enabled, bool, 0644);
-MODULE_PARM_DESC(static_ACL_Enabled, "Enable or disable DAI Inspection using static ACLs ONLY. Static Entries for packets not found in the ARP table will be dropped.");
-static int set_static_acl(const char *val, const struct kernel_param *kp)
-{
-    bool tmp;
-    // Convert the input string (e.g., "1" or "true") to a boolean (0 or 1)
-    int ret = kstrtobool(val, &tmp);
-    if (ret < 0) {
-        printk(KERN_INFO "kdai: static_ACL_Enabled was NOT updated, input was invalid\n\n");
-        return ret;
-    }
-
-    // Log a message to the kernel log to confirm the update
-    printk(KERN_INFO "kdai: static_ACL_Enabled updated from %d to %d\n\n", static_ACL_Enabled, tmp);
-
-    static_ACL_Enabled = tmp;
-    return 0;
-}
-static const struct kernel_param_ops static_acl_ops = {
-    .set = set_static_acl, //This funciton will be called whenever the static_ACL_Enabled variable is written too
-    .get = param_get_bool, //This function will be called whenever the static_ACL_Enabled variable is read
-};
-module_param_cb(static_ACL_Enabled, &static_acl_ops, &static_ACL_Enabled, 0644);
-
-
-char * vlans_to_inspect = NULL; //Default is None
-//module_param(vlans_to_inspect, charp, 0644);
-MODULE_PARM_DESC(vlans_to_inspect, "Comma-separated list of VLANs DAI should inspect");
-static int set_vlans_to_inspect(const char *val, const struct kernel_param *kp){
-    char *to_free; // Declare to_free for duplicating the string
-    char *str;
-    
-    // If the input string is empty, just return
-    if (val == NULL) {
-        printk(KERN_INFO "kdai: No VLANs to inspect (empty input).\n\n");
-        return 0;
-    }
-    if (strcmp(val,"clear") == 0) {
-        printk(KERN_INFO "kdai: Clearing VLANs To Inspect list\n\n");
-        free_all_vlan_entries();
-        print_all_vlans_in_hash();
-        return 0;
-    }
-
-    // Parse the incoming string of VLANs
-    to_free = kstrdup(val, GFP_KERNEL);
-    if (!to_free) {
-        printk(KERN_INFO "kdai: Could not dup\n\n");
-        return -ENOMEM; // Memory allocation failed
-    }
-    str = to_free;
-
-    //Remove all VLAN_ID entries from the list
-    printk(KERN_INFO "kdai: Clearing VLANs To Inspect list\n\n");
-    free_all_vlan_entries();
-
-    //Add all entries that are specified in new val
-    printk(KERN_INFO "kdai: Parsing VLANs To Inspect\n\n");
-    parse_vlans(to_free);
-
-    //Free allocate dmmemory
-    kfree(to_free);
-
-    printk(KERN_INFO "kdai: VLANs to inspect updated.\n\n");
-    print_all_vlans_in_hash();
-    return 0;
-}
-static const struct kernel_param_ops vlans_to_inspect_ops = {
-    .set = set_vlans_to_inspect, //This funciton will be called whenever the static_ACL_Enabled variable is written too
-    .get = param_get_charp, //This function will be called whenever the static_ACL_Enabled variable is read
-};
-module_param_cb(vlans_to_inspect, &vlans_to_inspect_ops, &vlans_to_inspect, 0644);
-
-
-char * trusted_interfaces; //Default is None
-//module_param(trusted_interfaces, charp, 0644);
-MODULE_PARM_DESC(trusted_interfaces, "Comma-separated list of Interfaces:VLAN_ID that are considered to be trusted");
-static int set_trusted_interfaces(const char *val, const struct kernel_param *kp){
-    char *to_free; // Declare to_free for duplicating the string
-    char *str;
-    
-    printk(KERN_INFO "kdai: Changed Trusted Interface List\n");
-    // If the input string is empty, just return
-    if (val == NULL) {
-        printk(KERN_INFO "kdai: Empty input for Trusted Interfaces.\n\n");
-        return 0;
-    }
-    if(strcmp(val,"clear") == 0) {
-        printk(KERN_INFO "kdai: Clearing Trusted list\n\n");
-        free_trusted_interface_list();
-        print_trusted_interface_list();
-        return 0;
-    }
-
-    // Parse the incoming string of VLANs
-    to_free = kstrdup(val, GFP_KERNEL);
-    if (!to_free) {
-        printk(KERN_INFO "kdai: Could not dup\n\n");
-        return -ENOMEM; // Memory allocation failed
-    }
-    str = to_free;
-
-    //Remove all trusted entries from the list
-    free_trusted_interface_list();
-
-    //Add all entries that are specified in new val
-    parse_interfaces_and_vlan(to_free);
-
-    //Free allocate dmmemory
-    kfree(to_free);
-
-    printk(KERN_INFO "kdai: Trusted Interfaces Updated.\n\n");
-    print_trusted_interface_list();
-    return 0;
-}
-static const struct kernel_param_ops trusted_interfaces_ops = {
-    .set = set_trusted_interfaces, //This funciton will be called whenever the static_ACL_Enabled variable is written too
-    .get = param_get_charp, //This function will be called whenever the static_ACL_Enabled variable is read
-};
-module_param_cb(trusted_interfaces, &trusted_interfaces_ops, &trusted_interfaces, 0644);
-
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("M. Sami GURPINAR <sami.gurpinar@gmail.com>. Edited by Korel Ucpinar <korelucpinar@gmail.com>");
 MODULE_DESCRIPTION("kdai(Kernel Dynamic ARP Inspection) is a linux kernel module to defend against arp spoofing");
-MODULE_VERSION("0.1"); 
+MODULE_VERSION("1.0"); 
 
+//A Macro used to check if an Ethernet address (addr) is a broadcast address
 #define eth_is_bcast(addr) (((addr)[0] & 0xffff) && ((addr)[2] & 0xffff) && ((addr)[4] & 0xffff))
 
-static struct nf_hook_ops* ipho = NULL;
-static struct nf_hook_ops* brho = NULL;
+//Two Netfilter Hooks used to capture incoming packets and check if they are either a dhcp or arp packet
+static struct nf_hook_ops* bridge_dhcp_hook = NULL;
+static struct nf_hook_ops* bridge_arp_hook = NULL;
 
+/**
+ * arp_is_valid - Validate ARP packet fields for consistency and correctness
+ * @skb: Pointer to the socket buffer containing the packet
+ * @ar_op: ARP operation code (e.g., ARP request or reply)
+ * @sha: Sender hardware (MAC) address from the ARP message body
+ * @sip: Sender IP address from the ARP message body
+ * @tha: Target hardware (MAC) address from the ARP message body
+ * @tip: Target IP address from the ARP message body
+ *
+ * This function performs sanity checks on the ARP packet fields to ensure
+ * the packet is well-formed and not malformed. It can validate:
+ * - That the sender MAC address in the ARP message matches the Ethernet header source MAC 
+ * - That sender and target IP addresses are not multicast, loopback, or zero network addresses
+ * - That for ARP replies, the target MAC address in the ARP message matches the Ethernet destination MAC
+ *
+ * Return: SUCCESS (0) if all validations pass,
+ *         or negative error codes indicating specific validation failures.
+ */
 static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha, 
     u32 sip, unsigned char* tha, u32 tip)  {
     int status = SUCCESS;
@@ -224,6 +94,28 @@ static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha,
     return status;
 }
 
+/**
+ * validate_arp_request - Validate incoming ARP requests for security
+ * @priv: Private data pointer 
+ * @skb: Pointer to the socket buffer containing the packet
+ * @state: Netfilter hook state info 
+ * @vlan_id: VLAN ID on which the packet was received
+ *
+ * This function processes ARP packets hooked at the bridge pre-routing stage.
+ * It validates the ARP message by checking:
+ *   - ARP header fields (using arp_is_valid)
+ *   - Whether the ARP source IP and MAC match known entries in the ARP table
+ *   - If static ACL mode is enabled, drops packets not matching static entries
+ *   - Otherwise, validates the ARP source against the DHCP snooping table
+ * 
+ * If validation fails at any stage, the packet is dropped.
+ * Packets matching all validation steps are accepted.
+ * Special debug bypass for interface "enp0s7".
+ *
+ * Return:
+ *   NF_ACCEPT to allow packet processing to continue
+ *   NF_DROP to drop the packet due to validation failure
+ */
 static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const struct nf_hook_state* state, u16 vlan_id) {
     
     //Refrence Structure to Standard ARP header used in the linux Kernel
@@ -339,6 +231,14 @@ static unsigned int validate_arp_request(void* priv, struct sk_buff* skb, const 
 
 }
 
+/**
+ * is_trusted - check if interface and VLAN combination is trusted
+ * @interface_name: interface name string
+ * @vlan_id: VLAN ID
+ *
+ * Returns true if the given interface and VLAN ID are in the trusted list,
+ * false otherwise.
+ */
 static bool is_trusted(const char *interface_name, u16 vlan_id) {
     // Check if the device is trusted using the find_trusted_interface function
     if (find_trusted_interface(interface_name, vlan_id)) {
@@ -350,7 +250,20 @@ static bool is_trusted(const char *interface_name, u16 vlan_id) {
     }
 }
 
-static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
+/**
+ * arp_hook_handler - netfilter hook for processing ARP packets
+ * @priv: private data pointer 
+ * @skb: socket buffer containing the packet
+ * @state: netfilter hook state information
+ *
+ * This function inspects incoming ARP packets on network interfaces,
+ * applying Dynamic ARP Inspection (DAI) rules depending on VLAN,
+ * global enablement, interface trust, and rate limits. This funciton relies on 
+ * validate_arp_request.
+ * 
+ * Returns NF_ACCEPT to accept the packet or NF_DROP to drop it. 
+ */
+static unsigned int arp_hook_handler(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
 
     struct net_device *dev;
     struct ethhdr * eth;
@@ -452,7 +365,19 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
     }    
 }
 
-static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
+/**
+ * dhcp_hook_handler - netfilter hook for processing DHCP packets
+ * @priv: private data pointer 
+ * @skb: socket buffer containing the packet
+ * @state: netfilter hook state information
+ *
+ * Processes DHCP packets on the network, updating the DHCP snooping
+ * table for lease times, IP-MAC bindings, and handling DHCPACK, DHCPNAK,
+ * DHCPRELEASE, and DHCPDECLINE messages. Drops invalid DHCP packets.
+ *
+ * Returns NF_ACCEPT to accept the packet or NF_DROP to drop it.
+ */
+static unsigned int dhcp_hook_handler(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
     struct udphdr* udp;
     struct dhcp* payload;
     unsigned char* opt;
@@ -591,7 +516,15 @@ static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hoo
     
 }
 
-
+/**
+ * kdai_init - Module initialization function
+ *
+ * Initializes data structures, parses configuration parameters,
+ * registers netfilter hooks for DHCP and ARP, and starts the DHCP
+ * cleanup kernel thread.
+ *
+ * Returns 0 on success or -ENOMEM on failure.
+ */
 static int __init kdai_init(void) {   
 
     init_vlan_hash_table();
@@ -603,35 +536,19 @@ static int __init kdai_init(void) {
     printk(KERN_INFO "kdai: static_ACL_Enabled=%d\n\n", static_ACL_Enabled);
     print_trusted_interface_list();
     print_all_vlans_in_hash();
-   
-     /*Initialize Generic Hook for rate limiting all Bridged Traffic*/
-     brho = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
-     if (unlikely(!brho))
-         goto err;
- 
-     brho->hook = (nf_hookfn *) bridge_hook;  
-     brho->hooknum = NF_BR_PRE_ROUTING;
-     brho->pf = NFPROTO_BRIDGE;
-     brho->priority = NF_BR_PRI_FIRST;
-     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-     nf_register_net_hook(&init_net, brho);
-     #else
-         nf_register_hook(brho);
-     #endif 
 
-    /* Initialize ip netfilter hook */
-    ipho = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
-    if (unlikely(!ipho))
+    bridge_dhcp_hook = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
+    if (unlikely(!bridge_dhcp_hook))
         goto err;
     
-    ipho->hook = (nf_hookfn *) ip_hook;         /* hook function */
-    ipho->hooknum = NF_BR_PRE_ROUTING;          /* received packets */
-    ipho->pf = NFPROTO_BRIDGE;                  /* IP */
-    ipho->priority = NF_BR_PRI_FIRST;
+    bridge_dhcp_hook->hook = (nf_hookfn *) dhcp_hook_handler;         
+    bridge_dhcp_hook->hooknum = NF_BR_PRE_ROUTING;          
+    bridge_dhcp_hook->pf = NFPROTO_BRIDGE;                  
+    bridge_dhcp_hook->priority = NF_BR_PRI_FIRST;
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-        nf_register_net_hook(&init_net, ipho);
+        nf_register_net_hook(&init_net, bridge_dhcp_hook);
     #else
-        nf_register_hook(ipho);
+        nf_register_hook(bridge_dhcp_hook);
     #endif
     
     dhcp_thread = kthread_run(dhcp_thread_handler, NULL, "DHCP Thread");
@@ -641,29 +558,50 @@ static int __init kdai_init(void) {
         printk(KERN_INFO"kdai: Cannot create kthread\n");
         goto err;
     }
+
+    bridge_arp_hook = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
+    if (unlikely(!bridge_arp_hook))
+        goto err;
+ 
+    bridge_arp_hook->hook = (nf_hookfn *) arp_hook_handler;  
+    bridge_arp_hook->hooknum = NF_BR_PRE_ROUTING;
+    bridge_arp_hook->pf = NFPROTO_BRIDGE;
+    bridge_arp_hook->priority = NF_BR_PRI_FIRST;
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+    nf_register_net_hook(&init_net, bridge_arp_hook);
+    #else
+        nf_register_hook(bridge_arp_hook);
+    #endif 
+
     return 0;   /* success */ 
+
 err:
-    if (ipho) kfree(ipho);
-    if(brho) kfree(brho);
+    if (bridge_dhcp_hook) kfree(bridge_dhcp_hook);
+    if(bridge_arp_hook) kfree(bridge_arp_hook);
     return -ENOMEM;    
 }
 
-
+/**
+ * kdai_exit - Module cleanup function
+ *
+ * Unregisters netfilter hooks, stops DHCP cleanup thread,
+ * and frees all allocated resources.
+ */
 static void __exit kdai_exit(void) {
 
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-        nf_unregister_net_hook(&init_net, brho);
+        nf_unregister_net_hook(&init_net, bridge_arp_hook);
     #else
-        nf_unregister_hook(brho);
+        nf_unregister_hook(bridge_arp_hook);
     #endif
-    kfree(brho);
+    kfree(bridge_arp_hook);
 
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-        nf_unregister_net_hook(&init_net, ipho);
+        nf_unregister_net_hook(&init_net, bridge_dhcp_hook);
     #else
-        nf_unregister_hook(ipho);
+        nf_unregister_hook(bridge_dhcp_hook);
     #endif
-    kfree(ipho);
+    kfree(bridge_dhcp_hook);
 
     clean_dhcp_snooping_table();
     kthread_stop(dhcp_thread);

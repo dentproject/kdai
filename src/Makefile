@@ -1,5 +1,5 @@
 obj-m := ${MODULE}.o
-${MODULE}-objs := main.o dhcp.o trusted_interfaces.o rate_limit.o vlan.o
+${MODULE}-objs := main.o dhcp.o trusted_interfaces.o rate_limit.o vlan.o module_params.o
 
 ccflags-y := -I$(PWD)/include -Wall -Werror
 

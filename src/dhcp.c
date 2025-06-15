@@ -7,6 +7,21 @@ DEFINE_SPINLOCK(slock);
 
 struct task_struct* dhcp_thread = NULL;
 
+/**
+ * insert_dhcp_snooping_entry - Insert a DHCP snooping entry into the list.
+ * @mac: Pointer to the MAC address.
+ * @ip: The IP address associated with the DHCP lease.
+ * @lease_time: Duration of the lease.
+ * @expire_time: Expiration timestamp of the lease.
+ * @vlan_id: VLAN ID associated with the entry.
+ *
+ * This function creates a new DHCP snooping entry with the given parameters and
+ * adds it to the global dhcp_snooping_list. The function checks that the VLAN ID
+ * is within the valid range (1-4094) before insertion. The list is protected with
+ * a spinlock to ensure thread safety.
+ *
+ * If memory allocation fails, or VLAN ID is invalid, the function returns early.
+ */
 void insert_dhcp_snooping_entry(u8 *mac, u32 ip, u32 lease_time, u32 expire_time, u16 vlan_id) {
     struct dhcp_snooping_entry* entry;
     unsigned long flags;
@@ -34,6 +49,16 @@ void insert_dhcp_snooping_entry(u8 *mac, u32 ip, u32 lease_time, u32 expire_time
 }
 
 
+/**
+ * find_dhcp_snooping_entry - Find a DHCP snooping entry by IP and VLAN ID.
+ * @ip: The IP address to search for.
+ * @vlan_id: The VLAN ID associated with the DHCP entry.
+ *
+ * Searches the global dhcp_snooping_list for an entry matching the given IP and VLAN ID.
+ * The list is locked during the search to ensure thread safety.
+ *
+ * Returns a pointer to the matching dhcp_snooping_entry if found, or NULL if not found.
+ */
 struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip, u16 vlan_id) {
     struct list_head* curr, *next;
     struct dhcp_snooping_entry* entry;
@@ -51,7 +76,15 @@ struct dhcp_snooping_entry* find_dhcp_snooping_entry(u32 ip, u16 vlan_id) {
     return NULL;
 }
 
-
+/**
+ * delete_dhcp_snooping_entry - Delete a DHCP snooping entry by IP and VLAN ID.
+ * @ip: The IP address of the entry to delete.
+ * @vlan_id: The VLAN ID associated with the entry to delete.
+ *
+ * Finds and removes the DHCP snooping entry matching the given IP and VLAN ID
+ * from the dhcp_snooping_list. The list is locked during removal to ensure
+ * thread safety. Frees the memory allocated for the entry after deletion.
+ */
 void delete_dhcp_snooping_entry(u32 ip, u16 vlan_id) {
     unsigned long flags;
     struct dhcp_snooping_entry* entry = find_dhcp_snooping_entry(ip, vlan_id);
@@ -64,7 +97,13 @@ void delete_dhcp_snooping_entry(u32 ip, u16 vlan_id) {
     }   
 }
 
-
+/**
+ * clean_dhcp_snooping_table - Remove and free all entries in the DHCP snooping list.
+ *
+ * Iterates over the dhcp_snooping_list, removing each entry from the list and
+ * freeing its associated memory. The list is locked during this operation to
+ * ensure thread safety.
+ */
 void clean_dhcp_snooping_table(void) {
     struct list_head* curr, *next;
     struct dhcp_snooping_entry* entry;
@@ -79,8 +118,18 @@ void clean_dhcp_snooping_table(void) {
     spin_unlock_irqrestore(&slock, flags);
 }
 
-//Continuously check the list of DHCP snooping entries and remove any entries that ave expired based on their
-//expiration time
+/**
+ * dhcp_thread_handler - Kernel thread function to clean expired DHCP snooping entries.
+ * @arg: Unused parameter.
+ *
+ * This function runs in a loop until the kernel thread is requested to stop.
+ * It obtains the current time and scans through the dhcp_snooping_list,
+ * removing and freeing any entries whose expiration time has passed.
+ * The list is locked during the traversal to ensure thread safety.
+ * The thread sleeps for 1 second between iterations to reduce CPU usage.
+ *
+ * Return: Always returns 0.
+ */
 int dhcp_thread_handler(void *arg) {
     struct list_head* curr, *next;
     struct dhcp_snooping_entry* entry;
@@ -116,7 +165,19 @@ int dhcp_thread_handler(void *arg) {
     return 0;
 }
 
-
+/**
+ * dhcp_is_valid - Validate DHCP packet consistency.
+ * @skb: Pointer to the socket buffer containing the DHCP packet.
+ *
+ * This function checks if the DHCP packet meets certain validity criteria:
+ * - For DHCP Discover and Request messages, it verifies that the client hardware address (chaddr)
+ *   in the DHCP payload matches the source MAC address in the Ethernet header.
+ * - It also checks that the gateway IP address (giaddr) is zero.
+ *
+ * Returns 0 (SUCCESS) if valid, or a negative error code if validation fails:
+ * - -EHWADDR if MAC addresses do not match.
+ * - -EIPADDR if giaddr is non-zero.
+ */
 int dhcp_is_valid(struct sk_buff* skb) {
     int status = SUCCESS;
     struct udphdr* udp;
