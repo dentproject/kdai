@@ -18,6 +18,9 @@
 #include <linux/version.h>
 #include <net/arp.h>
 #include <net/udp.h>
+#include <linux/netfilter_bridge.h>
+#include <linux/if_vlan.h>  
+#include <linux/moduleparam.h>
 
 #endif
 

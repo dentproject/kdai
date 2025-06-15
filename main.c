@@ -4,10 +4,7 @@
 #include "rate_limit.h"
 #include "vlan.h"
 #include "errno.h"
-#include <linux/netfilter_bridge.h>
-#include <linux/if_vlan.h>  
-#include <linux/moduleparam.h>
-#include <linux/module.h>
+#include "common.h"
 
 
 bool globally_enabled_DAI = false; //Default is false
