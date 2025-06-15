@@ -22,7 +22,7 @@ jobs:
             chmod +x ./tests/module_init/*.sh
             chmod +x ./tests/set_params/*.sh
             chmod +x ./tests/param_behavior/*.sh
-            chmod +x ./tests/CoreDAIFeatures/*.sh
+            chmod +x ./tests/core_dai_features/*.sh
             chmod +x ./tests/EdgeCases/*.sh
 
       # Run module_init Tests
@@ -88,38 +88,38 @@ jobs:
         working-directory: ./tests/param_behavior/
         run: ./test_static_acl_enabled.sh
       
-      # Run Core_DAI_Features Tests
-      - name: Run Test_ARP_Poisoning
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_ARP_Poisoning.sh
+      # Run core_dai_features Tests
+      - name: Run test_above_rate_limit
+        working-directory: ./tests/core_dai_features/
+        run: ./test_above_rate_limit.sh
 
-      - name: Run Test_Communication_after_DHCP_Snooping
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Communication_after_DHCP_Snooping.sh
+      - name: Run test_arp_poisoning
+        working-directory: ./tests/core_dai_features/
+        run: ./test_arp_poisoning.sh
 
-      - name: Run Test_Communication_from_Unacknowledged_Sources
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Communication_from_Unacknowledged_Sources.sh
+      - name: Run test_below_rate_limit
+        working-directory: ./tests/core_dai_features/
+        run: ./test_below_rate_limit.sh
+        
+      - name: Run test_communication_after_dhcp_snooping
+        working-directory: ./tests/core_dai_features/
+        run: ./test_communication_after_dhcp_snooping.sh
 
-      - name: Run Test_Static_Entry_In_The_ARP_Table
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Static_Entry_In_The_ARP_Table.sh
+      - name: Run test_communication_from_unacknowledged_sources
+        working-directory: ./tests/core_dai_features/
+        run: ./test_communication_from_unacknowledged_sources.sh
 
-      - name: Run Test_Trusted_Interfaces
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Trusted_Interfaces.sh
+      - name: Run test_static_entry_in_the_arp_table
+        working-directory: ./tests/core_dai_features/
+        run: ./test_static_entry_in_the_arp_table.sh
 
-      - name: Run Test_Untrusted_Interfaces
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Untrusted_Interfaces.sh
+      - name: Run test_trusted_interfaces
+        working-directory: ./tests/core_dai_features/
+        run: ./test_trusted_interfaces.sh
 
-      - name: Run Test_Above_Rate_Limit
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Above_Rate_Limit.sh
-
-      - name: Run Test_Below_Rate_Limit
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Below_Rate_Limit.sh
+      - name: Run test_untrusted_interfaces
+        working-directory: ./tests/core_dai_features/
+        run: ./test_untrusted_interfaces.sh
 
         # Run Edge_Cases Tests
       - name: Run Test_Malformed_ARP_Request
