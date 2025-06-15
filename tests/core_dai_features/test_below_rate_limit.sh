@@ -45,7 +45,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -65,7 +65,7 @@ echo "=== Testing DAI Accepts Packets when Rate Limit is Not Yet Reached ==="
 echo
 
 #Send arp packets above the rate limit
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/send_ARP_Packets_Below_Limit.py
+sudo ip netns exec ns1 python3 ../python_helpers/send_arp_packets_below_limit.py
 if ! dmesg | grep -q "Packet hit the rate limit."; then
     # Pattern not found
     echo "Packet hit the rate limit.' was NOT found"

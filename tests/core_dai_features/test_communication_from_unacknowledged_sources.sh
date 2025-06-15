@@ -45,7 +45,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -63,7 +63,7 @@ echo
 echo "=== Testing DAI Filtering From Unacknowledged Sources ==="
 echo
 #Send arp request without first being added to the DHCP or Static ARP table
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_with_vlan_id.py
 
 sudo dmesg | tail -n 20 | grep "DROPPING"
 sudo dmesg | tail -n 20 | grep "It is not possible to Validate Source."

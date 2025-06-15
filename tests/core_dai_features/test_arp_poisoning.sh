@@ -46,7 +46,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -65,7 +65,7 @@ echo
 echo "=== Testing DAI Drops Spoofed Packets ==="
 echo
 #Update the DHCP table with 192.168.1.1 and 192.168.1.2
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/DHCP_without_VLAN.py
+sudo ip netns exec ns1 python3 ../python_helpers/dhcp_without_vlan.py
 #Tell 192.168.1.11 you are somebody else already on the network (Perform Arp poisoning attack)
 sudo ip netns exec ns1 sudo arpspoof -i veth0 -t 192.168.1.11 192.168.1.2 &
 sleep 3

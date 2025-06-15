@@ -46,7 +46,7 @@ sudo ../testenv/setup_test_env.sh
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg -C
 
 echo
@@ -64,7 +64,7 @@ echo
 echo "=== Testing DAI Accepts Packets From Untrusted Interfaces ==="
 echo
 #Send and ARP Request and wait for a Response
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+sudo ip netns exec ns1 python3 ../python_helpers/arp_request_and_response_without_vlan_id.py
 sudo dmesg | grep "Interface is UNTRUSTED"
 sudo dmesg | grep "It is not possible to Validate Source."
 
