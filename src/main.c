@@ -12,10 +12,12 @@ MODULE_AUTHOR("M. Sami GURPINAR <sami.gurpinar@gmail.com>. Edited by Korel Ucpin
 MODULE_DESCRIPTION("kdai(Kernel Dynamic ARP Inspection) is a linux kernel module to defend against arp spoofing");
 MODULE_VERSION("0.1"); 
 
+//A Macro used to check if an Ethernet address (addr) is a broadcast address
 #define eth_is_bcast(addr) (((addr)[0] & 0xffff) && ((addr)[2] & 0xffff) && ((addr)[4] & 0xffff))
 
-static struct nf_hook_ops* ipho = NULL;
-static struct nf_hook_ops* brho = NULL;
+//Two Netfilter Hooks used to capture incoming packets and check if they are either a dhcp or arp packet
+static struct nf_hook_ops* bridge_dhcp_hook = NULL;
+static struct nf_hook_ops* bridge_arp_hook = NULL;
 
 static int arp_is_valid(struct sk_buff* skb, u16 ar_op, unsigned char* sha, 
     u32 sip, unsigned char* tha, u32 tip)  {
@@ -200,7 +202,7 @@ static bool is_trusted(const char *interface_name, u16 vlan_id) {
     }
 }
 
-static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
+static unsigned int arp_hook_handler(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
 
     struct net_device *dev;
     struct ethhdr * eth;
@@ -302,7 +304,7 @@ static unsigned int bridge_hook(void* priv, struct sk_buff* skb, const struct nf
     }    
 }
 
-static unsigned int ip_hook(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
+static unsigned int dhcp_hook_handler(void* priv, struct sk_buff* skb, const struct nf_hook_state* state) {
     struct udphdr* udp;
     struct dhcp* payload;
     unsigned char* opt;
@@ -453,35 +455,19 @@ static int __init kdai_init(void) {
     printk(KERN_INFO "kdai: static_ACL_Enabled=%d\n\n", static_ACL_Enabled);
     print_trusted_interface_list();
     print_all_vlans_in_hash();
-   
-     /*Initialize Generic Hook for rate limiting all Bridged Traffic*/
-     brho = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
-     if (unlikely(!brho))
-         goto err;
- 
-     brho->hook = (nf_hookfn *) bridge_hook;  
-     brho->hooknum = NF_BR_PRE_ROUTING;
-     brho->pf = NFPROTO_BRIDGE;
-     brho->priority = NF_BR_PRI_FIRST;
-     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-     nf_register_net_hook(&init_net, brho);
-     #else
-         nf_register_hook(brho);
-     #endif 
 
-    /* Initialize ip netfilter hook */
-    ipho = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
-    if (unlikely(!ipho))
+    bridge_dhcp_hook = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
+    if (unlikely(!bridge_dhcp_hook))
         goto err;
     
-    ipho->hook = (nf_hookfn *) ip_hook;         /* hook function */
-    ipho->hooknum = NF_BR_PRE_ROUTING;          /* received packets */
-    ipho->pf = NFPROTO_BRIDGE;                  /* IP */
-    ipho->priority = NF_BR_PRI_FIRST;
+    bridge_dhcp_hook->hook = (nf_hookfn *) dhcp_hook_handler;         
+    bridge_dhcp_hook->hooknum = NF_BR_PRE_ROUTING;          
+    bridge_dhcp_hook->pf = NFPROTO_BRIDGE;                  
+    bridge_dhcp_hook->priority = NF_BR_PRI_FIRST;
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-        nf_register_net_hook(&init_net, ipho);
+        nf_register_net_hook(&init_net, bridge_dhcp_hook);
     #else
-        nf_register_hook(ipho);
+        nf_register_hook(bridge_dhcp_hook);
     #endif
     
     dhcp_thread = kthread_run(dhcp_thread_handler, NULL, "DHCP Thread");
@@ -491,10 +477,26 @@ static int __init kdai_init(void) {
         printk(KERN_INFO"kdai: Cannot create kthread\n");
         goto err;
     }
+
+    bridge_arp_hook = (struct nf_hook_ops *) kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
+    if (unlikely(!bridge_arp_hook))
+        goto err;
+ 
+    bridge_arp_hook->hook = (nf_hookfn *) arp_hook_handler;  
+    bridge_arp_hook->hooknum = NF_BR_PRE_ROUTING;
+    bridge_arp_hook->pf = NFPROTO_BRIDGE;
+    bridge_arp_hook->priority = NF_BR_PRI_FIRST;
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+    nf_register_net_hook(&init_net, bridge_arp_hook);
+    #else
+        nf_register_hook(bridge_arp_hook);
+    #endif 
+
     return 0;   /* success */ 
+
 err:
-    if (ipho) kfree(ipho);
-    if(brho) kfree(brho);
+    if (bridge_dhcp_hook) kfree(bridge_dhcp_hook);
+    if(bridge_arp_hook) kfree(bridge_arp_hook);
     return -ENOMEM;    
 }
 
@@ -502,18 +504,18 @@ err:
 static void __exit kdai_exit(void) {
 
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-        nf_unregister_net_hook(&init_net, brho);
+        nf_unregister_net_hook(&init_net, bridge_arp_hook);
     #else
-        nf_unregister_hook(brho);
+        nf_unregister_hook(bridge_arp_hook);
     #endif
-    kfree(brho);
+    kfree(bridge_arp_hook);
 
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
-        nf_unregister_net_hook(&init_net, ipho);
+        nf_unregister_net_hook(&init_net, bridge_dhcp_hook);
     #else
-        nf_unregister_hook(ipho);
+        nf_unregister_hook(bridge_dhcp_hook);
     #endif
-    kfree(ipho);
+    kfree(bridge_dhcp_hook);
 
     clean_dhcp_snooping_table();
     kthread_stop(dhcp_thread);
