@@ -20,12 +20,12 @@ jobs:
         run: |
             chmod +x ./tests/testenv/*.sh
             chmod +x ./tests/module_init/*.sh
-            chmod +x ./tests/SettingDynamicParameters/*.sh
+            chmod +x ./tests/set_params/*.sh
             chmod +x ./tests/UsingDynamicParameters/*.sh
             chmod +x ./tests/CoreDAIFeatures/*.sh
             chmod +x ./tests/EdgeCases/*.sh
 
-      # Run initialization_of_the_module Tests
+      # Run module_init Tests
       - name: Run test_build_kernel_module
         working-directory: ./tests/module_init/
         run: ./test_build_kernel_module.sh
@@ -34,46 +34,46 @@ jobs:
         working-directory: ./tests/module_init/
         run: ./test_insert_kernel_module.sh
 
-      # Run Setting_Dynamic_Parameters Tests
-      - name: Run Test_add_Trusted_Interface
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_Trusted_Interface.sh
+      # Run set_params Tests
+      - name: Run test_add_trusted_interface
+        working-directory: ./tests/set_params/
+        run: ./test_add_trusted_interface.sh
 
-      - name: Run Test_add_Trusted_Interfaces_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_Trusted_Interfaces_Malformed.sh
+      - name: Run test_add_trusted_interfaces_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_add_trusted_interfaces_malformed.sh
 
-      - name: Run Test_add_Trusted_Interfaces
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_Trusted_Interfaces.sh
+      - name: Run test_add_trusted_interfaces
+        working-directory: ./tests/set_params/
+        run: ./test_add_trusted_interfaces.sh
 
-      - name: Run Test_add_VLAN
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_VLAN.sh
+      - name: Run test_add_vlan
+        working-directory: ./tests/set_params/
+        run: ./test_add_vlan.sh
 
-      - name: Run Test_add_VLANs_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_VLANs_Malformed.sh
+      - name: Run test_add_vlans_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_add_vlans_malformed.sh
 
-      - name: Run Test_add_VLANs
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_VLANs.sh
+      - name: Run test_add_vlans
+        working-directory: ./tests/set_params/
+        run: ./test_add_vlans.sh
 
-      - name: Run Test_set_globally_enabled_DAI
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_globally_enabled_DAI.sh
+      - name: Run test_set_globally_enabled_dai_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_set_globally_enabled_dai_malformed.sh
 
-      - name: Run Test_set_globally_enabled_DAI_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_globally_enabled_DAI_Malformed.sh
+      - name: Run test_set_globally_enabled_dai
+        working-directory: ./tests/set_params/
+        run: ./test_set_globally_enabled_dai.sh
 
-      - name: Run Test_set_static_ACL_Enabled
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_static_ACL_Enabled.sh
+      - name: Run test_set_static_acl_enabled_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_set_static_acl_enabled_malformed.sh
 
-      - name: Run Test_set_static_ACL_Enabled_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_static_ACL_Enabled_Malformed.sh
+      - name: Run test_set_static_acl_enabled
+        working-directory: ./tests/set_params/
+        run: ./test_set_static_acl_enabled.sh
 
       # Run Using_Dynamic_Parameters Tests
       - name: Run Test_DAI_VLAN_Filtering
@@ -89,7 +89,6 @@ jobs:
         run: ./Test_static_ACL_Enabled.sh
       
       # Run Core_DAI_Features Tests
-
       - name: Run Test_ARP_Poisoning
         working-directory: ./tests/CoreDAIFeatures/
         run: ./Test_ARP_Poisoning.sh
@@ -123,7 +122,6 @@ jobs:
         run: ./Test_Below_Rate_Limit.sh
 
         # Run Edge_Cases Tests
-
       - name: Run Test_Malformed_ARP_Request
         working-directory: ./tests/EdgeCases/
         run: ./Test_Malformed_ARP_Request.sh

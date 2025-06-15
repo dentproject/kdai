@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# This script checks if the kernel module can add more than one Interfaces to the Trusted List
+# This script checks if the module can set the static_acl_enabled input parameter.
+# When enabled the DHCP Snooping table is no longer considered and packets are accepted or dropped based
+# on the static arp table.
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -58,15 +60,14 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo "veth2:20,veth1:10" | sudo tee /sys/module/kdai/parameters/trusted_interfaces
+echo 1 | sudo tee /sys/module/kdai/parameters/static_ACL_Enabled
 
 echo
-echo "=== Testing DAI Adds Trusted Interface to Entries ==="
+echo "=== Testing DAI rejcets all non Static Configurations ==="
 echo
-sudo dmesg | grep -E "VLAN ID:\s*10\s*Interface:\s*veth1"
-sudo dmesg | grep -E "VLAN ID:\s*20\s*Interface:\s*veth2"
+sudo dmesg | grep "static_ACL_Enabled updated from 0 to 1"
+echo
 
-echo
 echo "Test Passed!"          
 sudo dmesg -n 7
 echo

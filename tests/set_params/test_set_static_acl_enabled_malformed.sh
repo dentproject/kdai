@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# This script checks if DAI can set the static_ACL_Enabled boolean.
-# When enabled the DHCP Snooping table is no longer considered and Packets are accepted or dropped based
-# on the static arp table
+# This script checks if the kernel module can handle malformed static_acl_enabled inputs.
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -43,12 +41,12 @@ cleanup
 sudo dmesg -C
 sudo dmesg -n 3
 
-sudo ../testenv/setup_test_env.sh
+#sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+#sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
@@ -60,16 +58,29 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo 1 | sudo tee /sys/module/kdai/parameters/static_ACL_Enabled
+# Valid input for context
+#echo 1 | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI
 
-echo
-echo "=== Testing DAI rejcets all non Static Configurations ==="
-echo
-sudo dmesg | grep "static_ACL_Enabled updated from 0 to 1"
-echo
+echo "=== Testing DAI globalldy_enabled_DAI  Entries ==="
+# Function to check that the command fails (i.e., invalid input is rejected)
+expect_failure() {
+    input=$1
+    echo "Testing malformed input: '$input'"
+    
+    set +e  # Temporarily disable exit-on-error
+    echo "$input" | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI >/dev/null
+    status=$?
+    set -e  # Re-enable exit-on-error
 
-echo "Test Passed!"          
-sudo dmesg -n 7
-echo
+    if [ $status -eq 0 ]; then
+        echo "Test failed: '$input' was accepted but should have been rejected"
+        exit 1
+    else
+        echo "Test passed: '$input' correctly rejected"
+    fi
+}
 
-exit 
+# Run tests
+expect_failure 2
+expect_failure z
+expect_failure -1

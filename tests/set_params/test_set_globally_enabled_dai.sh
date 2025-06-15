@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# This script checks if DAI can set the globally_enabled_DAI boolean.
-# When enabled the kernel module inspects all packets as if they are part of the same VLAN
+# This script checks if the module can set the globally_enabled_dai boolean.
+# When enabled the kernel module inspects all packets as if they are part of the same vlan.
 
 set -euo pipefail  #treat unset vars as errors
 

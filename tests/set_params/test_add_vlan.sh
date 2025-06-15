@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script checks if DAI can add one VLAN to the inspection list
+# This script checks if the module can add one VLAN to the inspection list
 
 set -euo pipefail  #treat unset vars as errors
 
