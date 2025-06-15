@@ -19,111 +19,109 @@ jobs:
       - name: Make test script executable
         run: |
             chmod +x ./tests/testenv/*.sh
-            chmod +x ./tests/InitializationOfTheModule/*.sh
-            chmod +x ./tests/SettingDynamicParameters/*.sh
-            chmod +x ./tests/UsingDynamicParameters/*.sh
-            chmod +x ./tests/CoreDAIFeatures/*.sh
-            chmod +x ./tests/EdgeCases/*.sh
+            chmod +x ./tests/module_init/*.sh
+            chmod +x ./tests/set_params/*.sh
+            chmod +x ./tests/param_behavior/*.sh
+            chmod +x ./tests/core_dai_features/*.sh
+            chmod +x ./tests/edge_cases/*.sh
 
-      # Run Initialization_Of_The_Module Tests
-      - name: Run Test_Build_Kernel_Module
-        working-directory: ./tests/InitializationOfTheModule/
-        run: ./Test_Build_Kernel_Module.sh
+      # Run module_init Tests
+      - name: Run test_build_kernel_module
+        working-directory: ./tests/module_init/
+        run: ./test_build_kernel_module.sh
 
-      - name: Run Test_Insert_Kernel_Module
-        working-directory: ./tests/InitializationOfTheModule/
-        run: ./Test_Insert_Kernel_Module.sh
+      - name: Run test_insert_kernel_module
+        working-directory: ./tests/module_init/
+        run: ./test_insert_kernel_module.sh
 
-      # Run Setting_Dynamic_Parameters Tests
-      - name: Run Test_add_Trusted_Interface
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_Trusted_Interface.sh
+      # Run set_params Tests
+      - name: Run test_add_trusted_interface
+        working-directory: ./tests/set_params/
+        run: ./test_add_trusted_interface.sh
 
-      - name: Run Test_add_Trusted_Interfaces_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_Trusted_Interfaces_Malformed.sh
+      - name: Run test_add_trusted_interfaces_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_add_trusted_interfaces_malformed.sh
 
-      - name: Run Test_add_Trusted_Interfaces
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_Trusted_Interfaces.sh
+      - name: Run test_add_trusted_interfaces
+        working-directory: ./tests/set_params/
+        run: ./test_add_trusted_interfaces.sh
 
-      - name: Run Test_add_VLAN
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_VLAN.sh
+      - name: Run test_add_vlan
+        working-directory: ./tests/set_params/
+        run: ./test_add_vlan.sh
 
-      - name: Run Test_add_VLANs_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_VLANs_Malformed.sh
+      - name: Run test_add_vlans_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_add_vlans_malformed.sh
 
-      - name: Run Test_add_VLANs
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_add_VLANs.sh
+      - name: Run test_add_vlans
+        working-directory: ./tests/set_params/
+        run: ./test_add_vlans.sh
 
-      - name: Run Test_set_globally_enabled_DAI
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_globally_enabled_DAI.sh
+      - name: Run test_set_globally_enabled_dai_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_set_globally_enabled_dai_malformed.sh
 
-      - name: Run Test_set_globally_enabled_DAI_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_globally_enabled_DAI_Malformed.sh
+      - name: Run test_set_globally_enabled_dai
+        working-directory: ./tests/set_params/
+        run: ./test_set_globally_enabled_dai.sh
 
-      - name: Run Test_set_static_ACL_Enabled
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_static_ACL_Enabled.sh
+      - name: Run test_set_static_acl_enabled_malformed
+        working-directory: ./tests/set_params/
+        run: ./test_set_static_acl_enabled_malformed.sh
 
-      - name: Run Test_set_static_ACL_Enabled_Malformed
-        working-directory: ./tests/SettingDynamicParameters/
-        run: ./Test_set_static_ACL_Enabled_Malformed.sh
+      - name: Run test_set_static_acl_enabled
+        working-directory: ./tests/set_params/
+        run: ./test_set_static_acl_enabled.sh
 
-      # Run Using_Dynamic_Parameters Tests
-      - name: Run Test_DAI_VLAN_Filtering
-        working-directory: ./tests/UsingDynamicParameters/
-        run: ./Test_DAI_VLAN_Filtering.sh
+      # Run param_behavior Tests
+      - name: Run test_dai_vlan_filtering
+        working-directory: ./tests/param_behavior/
+        run: ./test_dai_vlan_filtering.sh
 
-      - name: Run Test_globally_enabled_DAI
-        working-directory: ./tests/UsingDynamicParameters/
-        run: ./Test_globally_enabled_DAI.sh
+      - name: Run test_globally_enabled_dai
+        working-directory: ./tests/param_behavior/
+        run: ./test_globally_enabled_dai.sh
 
-      - name: Run Test_static_ACL_Enabled
-        working-directory: ./tests/UsingDynamicParameters/
-        run: ./Test_static_ACL_Enabled.sh
+      - name: Run test_static_acl_enabled
+        working-directory: ./tests/param_behavior/
+        run: ./test_static_acl_enabled.sh
       
-      # Run Core_DAI_Features Tests
+      # Run core_dai_features Tests
+      - name: Run test_above_rate_limit
+        working-directory: ./tests/core_dai_features/
+        run: ./test_above_rate_limit.sh
 
-      - name: Run Test_ARP_Poisoning
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_ARP_Poisoning.sh
+      - name: Run test_arp_poisoning
+        working-directory: ./tests/core_dai_features/
+        run: ./test_arp_poisoning.sh
 
-      - name: Run Test_Communication_after_DHCP_Snooping
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Communication_after_DHCP_Snooping.sh
+      - name: Run test_below_rate_limit
+        working-directory: ./tests/core_dai_features/
+        run: ./test_below_rate_limit.sh
 
-      - name: Run Test_Communication_from_Unacknowledged_Sources
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Communication_from_Unacknowledged_Sources.sh
+      - name: Run test_communication_after_dhcp_snooping
+        working-directory: ./tests/core_dai_features/
+        run: ./test_communication_after_dhcp_snooping.sh
 
-      - name: Run Test_Static_Entry_In_The_ARP_Table
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Static_Entry_In_The_ARP_Table.sh
+      - name: Run test_communication_from_unacknowledged_sources
+        working-directory: ./tests/core_dai_features/
+        run: ./test_communication_from_unacknowledged_sources.sh
 
-      - name: Run Test_Trusted_Interfaces
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Trusted_Interfaces.sh
+      - name: Run test_static_entry_in_the_arp_table
+        working-directory: ./tests/core_dai_features/
+        run: ./test_static_entry_in_the_arp_table.sh
 
-      - name: Run Test_Untrusted_Interfaces
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Untrusted_Interfaces.sh
+      - name: Run test_trusted_interfaces
+        working-directory: ./tests/core_dai_features/
+        run: ./test_trusted_interfaces.sh
 
-      - name: Run Test_Above_Rate_Limit
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Above_Rate_Limit.sh
+      - name: Run test_untrusted_interfaces
+        working-directory: ./tests/core_dai_features/
+        run: ./test_untrusted_interfaces.sh
 
-      - name: Run Test_Below_Rate_Limit
-        working-directory: ./tests/CoreDAIFeatures/
-        run: ./Test_Below_Rate_Limit.sh
-
-        # Run Edge_Cases Tests
-
-      - name: Run Test_Malformed_ARP_Request
-        working-directory: ./tests/EdgeCases/
-        run: ./Test_Malformed_ARP_Request.sh
+        # Run edge_cases Tests
+      - name: Run test_malformed_arp_request
+        working-directory: ./tests/edge_cases/
+        run: ./test_malformed_arp_request.sh

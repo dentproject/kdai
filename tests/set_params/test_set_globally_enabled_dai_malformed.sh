@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# Test_globally_enabled_DAI.sh
-# This script checks if the kernel module inspects all packets when globally_enabled_DAI is true
+# This script checks if the kernel module can handle malformed globally_enabled_dai inputs
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -42,12 +41,12 @@ cleanup
 sudo dmesg -C
 sudo dmesg -n 3
 
-sudo ../testenv/setup_test_env.sh
+#sudo ../testenv/setup_test_env.sh
 
 echo
 echo "=== Ensure Working Test Environment ==="
 echo
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
+#sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_Without_VLAN_ID.py
 sudo dmesg -C
 
 echo
@@ -59,21 +58,29 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
-echo 1 | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI
+# Valid input for context
+#echo 1 | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI
 
-echo
-echo "=== Testing DAI Inspects all packets ==="
-echo
-# Create and send the switch a Cusotm DHCP packet ACK for both 192.168.1.1 and 192.168.1.2 with VLAN_ID 10
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/DHCP_with_VLAN_10.py
-#Send and ARP Request and wait for a Response
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
+echo "=== Testing DAI globalldy_enabled_DAI  Entries ==="
+# Function to check that the command fails (i.e., invalid input is rejected)
+expect_failure() {
+    input=$1
+    echo "Testing malformed input: '$input'"
+    
+    set +e  # Temporarily disable exit-on-error
+    echo "$input" | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI >/dev/null
+    status=$?
+    set -e  # Re-enable exit-on-error
 
-sudo dmesg | grep "globally_enabled_DAI was ENABLED"
+    if [ $status -eq 0 ]; then
+        echo "Test failed: '$input' was accepted but should have been rejected"
+        exit 1
+    else
+        echo "Test passed: '$input' correctly rejected"
+    fi
+}
 
-
-echo
-echo "Test Passed!"          
-sudo dmesg -n 7
-exit 
+# Run tests
+expect_failure 2
+expect_failure z
+expect_failure -1

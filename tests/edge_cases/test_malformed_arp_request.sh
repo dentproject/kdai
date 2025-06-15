@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script checks if DAI can add one VLAN to the inspection list
+# This script checks if the kernel module drops malformed arp requests
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -58,16 +58,19 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo "10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+echo
+echo "=== Testing DAI Malformed ARP Request ==="
+echo
+#Send a Malformed ARP request
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/Test_Malformed_ARP_with_VLAN.py
+
+
+sudo dmesg | grep "DROPPING"
+sudo dmesg | grep "ARP was NOT VALID"
+
 
 echo
-echo "=== Testing DAI Adds VLAN_IDs to Entries ==="
-echo
-sudo dmesg | grep -E "VLAN ID:\s*10"
-echo
-
 echo "Test Passed!"          
 sudo dmesg -n 7
-echo
-
-exit 
+exit 0

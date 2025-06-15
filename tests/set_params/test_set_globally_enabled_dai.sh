@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# This script checks if the kernel module can add more than one Interfaces to the Trusted List
+# This script checks if the module can set the globally_enabled_dai boolean.
+# When enabled the kernel module inspects all packets as if they are part of the same vlan.
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -58,15 +59,14 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo "veth2:20,veth1:10" | sudo tee /sys/module/kdai/parameters/trusted_interfaces
+echo 1 | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI
 
 echo
-echo "=== Testing DAI Adds Trusted Interface to Entries ==="
+echo "=== Testing DAI rejcets all non Static Configurations ==="
 echo
-sudo dmesg | grep -E "VLAN ID:\s*10\s*Interface:\s*veth1"
-sudo dmesg | grep -E "VLAN ID:\s*20\s*Interface:\s*veth2"
+sudo dmesg | grep "globally_enabled_DAI updated from 0 to 1"
+echo
 
-echo
 echo "Test Passed!"          
 sudo dmesg -n 7
 echo

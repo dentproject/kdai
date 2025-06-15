@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Test_Malformed_ARP_Request_and_Response.sh
-# This script checks if the kernel module drops malformed arp requests
+# This script checks if the module can set the static_acl_enabled input parameter.
+# When enabled the DHCP Snooping table is no longer considered and packets are accepted or dropped based
+# on the static arp table.
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -59,19 +60,16 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
-echo
-echo "=== Testing DAI Malformed ARP Request ==="
-echo
-#Send a Malformed ARP request
-sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/Test_Malformed_ARP_with_VLAN.py
-
-
-sudo dmesg | grep "DROPPING"
-sudo dmesg | grep "ARP was NOT VALID"
-
+echo 1 | sudo tee /sys/module/kdai/parameters/static_ACL_Enabled
 
 echo
+echo "=== Testing DAI rejcets all non Static Configurations ==="
+echo
+sudo dmesg | grep "static_ACL_Enabled updated from 0 to 1"
+echo
+
 echo "Test Passed!"          
 sudo dmesg -n 7
-exit 0
+echo
+
+exit 

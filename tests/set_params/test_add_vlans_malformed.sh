@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script checks if the kernel module can handle malformed Trusted Interface Input
+# This script checks if the kernel module can handle malformed vlan to the inspection list.
 
 set -euo pipefail  #treat unset vars as errors
 

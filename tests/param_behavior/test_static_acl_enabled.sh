@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# This script checks if DAI can set the globally_enabled_DAI boolean.
-# When enabled the kernel module inspects all packets as if they are part of the same VLAN
+# This script checks if the kernel module Accepts packets that were added statically and rejects them if they were not.
+# It does not check the DHCP snooping table
 
 set -euo pipefail  #treat unset vars as errors
 
@@ -59,16 +59,22 @@ echo
 echo "=== Running make load_with_params to insert the module ==="
 echo
 make -C ../.. install
-echo 1 | sudo tee /sys/module/kdai/parameters/globally_enabled_DAI
+echo "1,10" | sudo tee /sys/module/kdai/parameters/vlans_to_inspect
+echo 1 | sudo tee /sys/module/kdai/parameters/static_ACL_Enabled
 
 echo
 echo "=== Testing DAI rejcets all non Static Configurations ==="
 echo
-sudo dmesg | grep "globally_enabled_DAI updated from 0 to 1"
-echo
+# Create and send the switch a Cusotm DHCP packet ACK for both 192.168.1.1 and 192.168.1.2 with VLAN_ID 10
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/DHCP_with_VLAN_10.py
+#Send and ARP Request and wait for a Response
+sudo ip netns exec ns1 python3 ../helperPythonFilesForCustomPackets/ARP_Request_And_Response_With_VLAN_ID.py
 
+sudo dmesg | grep "DROPPING"
+sudo dmesg | grep "Implicit Drop was Added since static_ACL was Enabled"
+
+
+echo
 echo "Test Passed!"          
 sudo dmesg -n 7
-echo
-
 exit 

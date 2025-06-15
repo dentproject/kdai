@@ -1,4 +1,4 @@
-#include "trustedInterfaces.h"
+#include "trusted_interfaces.h"
 #include "errno.h"
 
 LIST_HEAD(trusted_interface_list);  // Global list head for interfaces

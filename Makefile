@@ -4,7 +4,7 @@ KERNELRELEASE := $(shell uname -r)
 KDIR := /lib/modules/${KERNELRELEASE}/build
 MDIR := /lib/modules/${KERNELRELEASE}
 obj-m := ${MODULE}.o
-${MODULE}-objs := main.o dhcp.o trustedInterfaces.o rate_limit.o vlan.o
+${MODULE}-objs := main.o dhcp.o trusted_interfaces.o rate_limit.o vlan.o
 
 all:
 	@echo "Building the module..."
