@@ -152,7 +152,6 @@ bool rate_limit_reached(const char *interface_name, u16 vlan_id){
  * each entry from the list, and frees the allocated memory. 
  * The operation is done under a spinlock to ensure thread safety.
  *
- * Return: void
  */
 void clean_rate_limit_table(void){
     struct list_head* curr, *next;
